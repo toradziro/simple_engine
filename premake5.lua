@@ -17,8 +17,10 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 -- Include directories relative to root folder (solution directory)
 IncludeDir = {}
+IncludeDir["GLFW"] = "sandbox/vendor/GLFW/include"
 
 group "Dependencies"
+	include "sandbox/vendor/GLFW"
 group ""
 
 defines
@@ -57,6 +59,12 @@ project "sandbox"
 	includedirs
 	{
 		"%{prj.name}/src",
+		"%{IncludeDir.GLFW}"
+	}
+
+	links
+	{
+		"GLFW"
 	}
 
 	filter "system:windows"
