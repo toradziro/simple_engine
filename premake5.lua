@@ -15,10 +15,19 @@ workspace "sandbox"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
+local vulkan_path = os.getenv("VULKAN_SDK_PATH")
+
+if not vulkan_path or #vulkan_path == 0 then
+	error("Set VULKAN_SDK_PATH variable")
+else
+	print(string.format("Vulkan path is: %s", vulkan_path))
+end
+
 -- Include directories relative to root folder (solution directory)
 IncludeDir = {}
 IncludeDir["GLFW"] = "sandbox/vendor/GLFW/include"
 IncludeDir["glm"] = "sandbox/vendor/glm"
+IncludeDir["vulkan"] = string.format("%s/%s", vulkan_path, "Include")
 
 group "Dependencies"
 	include "sandbox/vendor/GLFW"
@@ -62,12 +71,21 @@ project "sandbox"
 		"%{prj.name}/src",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.glm}",
+		"%{IncludeDir.vulkan}"
+	}
+
+	local vulkan_lib_path = string.format("%s/%s", vulkan_path, "Lib")
+	libdirs
+	{
+		vulkan_lib_path
 	}
 
 	links
 	{
-		"GLFW"
+		"GLFW",
+		"vulkan-1"
 	}
+
 
 	filter "system:windows"
 		systemversion "latest"
