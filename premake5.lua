@@ -15,10 +15,10 @@ workspace "sandbox"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
-local vulkan_path = os.getenv("VULKAN_SDK_PATH")
+local vulkan_path = os.getenv("VULKAN_SDK")
 
 if not vulkan_path or #vulkan_path == 0 then
-	error("Set VULKAN_SDK_PATH variable")
+	error("Set VULKAN_SDK variable")
 else
 	print(string.format("Vulkan path is: %s", vulkan_path))
 end
