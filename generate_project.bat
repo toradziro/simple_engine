@@ -1,2 +1,2 @@
-call vendor\v_bin\premake\premake5.exe vs2022
+python generate_project.py
 PAUSE

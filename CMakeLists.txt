@@ -1,0 +1,93 @@
+cmake_minimum_required(VERSION 3.16)
+project(sandbox LANGUAGES CXX)
+
+# Set standard C++20
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Set up dirs
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
+
+# Compile options
+option(BUILD_DEBUG "Build in Debug mode" ON)
+option(BUILD_RELEASE "Build in Release mode" OFF)
+
+# Multi-processor compilation для MSVC
+if(MSVC)
+    add_compile_options(/MP)
+endif()
+
+# Set Vulkan SDK
+if(NOT DEFINED ENV{VULKAN_SDK_PATH})
+    message(FATAL_ERROR "Set VULKAN_SDK_PATH variable")
+else()
+    set(VULKAN_SDK_PATH $ENV{VULKAN_SDK_PATH})
+    message(STATUS "Vulkan path is: ${VULKAN_SDK_PATH}")
+endif()
+
+# Set includes
+set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW/include")
+set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/glm")
+set(VULKAN_INCLUDE_DIR "${VULKAN_SDK_PATH}/Include")
+
+# Set GLFW
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_ALL)
+
+# Main project
+add_executable(sandbox)
+
+# Поиск исходных файлов
+file(GLOB_RECURSE SANDBOX_SOURCES "sandbox/src/**.cpp")
+file(GLOB_RECURSE SANDBOX_HEADERS "sandbox/src/**.h")
+
+# Source files
+target_sources(sandbox PRIVATE ${SANDBOX_SOURCES} ${SANDBOX_HEADERS})
+
+# Include files
+target_include_directories(sandbox PRIVATE 
+    "sandbox/src"
+    ${GLFW_INCLUDE_DIR}
+    ${GLM_INCLUDE_DIR}
+    ${VULKAN_INCLUDE_DIR}
+)
+
+# Vulkan path
+set(VULKAN_LIB_DIR "${VULKAN_SDK_PATH}/Lib")
+target_link_directories(sandbox PRIVATE ${VULKAN_LIB_DIR})
+
+# Add libs
+target_link_libraries(sandbox PRIVATE glfw vulkan-1)
+
+# Win defines
+if(WIN32)
+    target_compile_definitions(sandbox PRIVATE _CRT_SECURE_NO_WARNINGS)
+endif()
+
+# Lib config
+set_target_properties(sandbox PROPERTIES 
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release"
+)
+
+# Debug config
+target_compile_options(sandbox PRIVATE 
+    $<$<CONFIG:Debug>:
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MDd>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O0>
+    >
+)
+
+# Release config
+target_compile_options(sandbox PRIVATE 
+    $<$<CONFIG:Release>:
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MD>
+        $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O2>
+    >
+)
+
+# Set starting project
+if(MSVC)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT sandbox)
+endif()
