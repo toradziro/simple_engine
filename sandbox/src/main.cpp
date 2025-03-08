@@ -33,6 +33,10 @@ void checkLibs()
 		{
 			std::cerr << "Failed to enumerate Vulkan version!" << std::endl;
 		}
+
+		uint32_t extentionsSupportedCount = 0;
+		vkEnumerateInstanceExtensionProperties(nullptr, &extentionsSupportedCount, nullptr);
+		std::cout << std::format("Extentions conunt: {}\n", extentionsSupportedCount);
 	}
 
 	//-- glfw check
@@ -44,10 +48,9 @@ void checkLibs()
 
 int main(int argc, char** argv)
 {
-	if (!glfwInit())
-	{
-		std::cerr << "Failed to initialize GLFW!" << std::endl;
-	}
+	checkLibs();
+
+	assert(glfwInit());
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* win = glfwCreateWindow(1200, 800, "vulkan_try", nullptr, nullptr);
