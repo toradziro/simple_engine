@@ -8,12 +8,12 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
-int main(int argc, char** argv)
+void checkLibs()
 {
 	// glm added check
 	{
 		glm::vec2 vec = { 1.0f, 10.0f };
-		std::cout << std::format("Hello in {}, {} {}", argv[0], vec.x, vec.y) << std::endl;
+		std::cout << std::format("{} {}", vec.x, vec.y) << std::endl;
 	}
 
 	// vulkan check
@@ -35,16 +35,39 @@ int main(int argc, char** argv)
 		}
 	}
 
-	// GLFW check
-	{
-		if (!glfwInit())
-		{
-			std::cerr << "Failed to initialize GLFW!" << std::endl;
-		}
-
+	//-- glfw check
+	{	
 		const char* version = glfwGetVersionString();
 		std::cout << "GLFW Version: " << version << std::endl;
-
-		glfwTerminate();
 	}
+}
+
+int main(int argc, char** argv)
+{
+	if (!glfwInit())
+	{
+		std::cerr << "Failed to initialize GLFW!" << std::endl;
+	}
+
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	GLFWwindow* win = glfwCreateWindow(1200, 800, "vulkan_try", nullptr, nullptr);
+	bool shouldClouseWindow = false;
+	glfwSetWindowUserPointer(win, &shouldClouseWindow);
+
+	glfwSetWindowCloseCallback(win, [](GLFWwindow* win)
+		{
+			bool* shouldClose = (bool*)glfwGetWindowUserPointer(win);
+			assert(shouldClose != nullptr);
+			*shouldClose = true;
+		});
+
+	while (!shouldClouseWindow)
+	{
+		glfwPollEvents();
+		glfwSwapBuffers(win);
+	}
+
+	glfwDestroyWindow(win);
+
+	glfwTerminate();
 }
