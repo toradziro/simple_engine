@@ -14,9 +14,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
 option(BUILD_DEBUG "Build in Debug mode" ON)
 option(BUILD_RELEASE "Build in Release mode" OFF)
 
-# Multi-processor compilation для MSVC
+# Multi-processor compilation for MSVC
 if(MSVC)
     add_compile_options(/MP)
+    # Enable option to preserve folder structure in Visual Studio
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 endif()
 
 # Set Vulkan SDK
@@ -38,9 +40,27 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_
 # Main project
 add_executable(sandbox)
 
-# Поиск исходных файлов
+# Find source files
 file(GLOB_RECURSE SANDBOX_SOURCES "sandbox/src/**.cpp")
 file(GLOB_RECURSE SANDBOX_HEADERS "sandbox/src/**.h")
+
+# File structure setup for Visual Studio
+# Function to set file structure as on disk
+function(assign_source_group)
+    foreach(_source IN ITEMS ${ARGN})
+        if(IS_ABSOLUTE "${_source}")
+            file(RELATIVE_PATH _source_rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_source}")
+        else()
+            set(_source_rel "${_source}")
+        endif()
+        get_filename_component(_source_path "${_source_rel}" PATH)
+        string(REPLACE "/" "\\" _source_path_msvc "${_source_path}")
+        source_group("${_source_path_msvc}" FILES "${_source}")
+    endforeach()
+endfunction(assign_source_group)
+
+# Apply function to our files
+assign_source_group(${SANDBOX_SOURCES} ${SANDBOX_HEADERS})
 
 # Source files
 target_sources(sandbox PRIVATE ${SANDBOX_SOURCES} ${SANDBOX_HEADERS})
