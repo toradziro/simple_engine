@@ -29,6 +29,7 @@ public:
 private:
 	void	createVkInstance();
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
+	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
 
 	void	createLogicalDevice();
 
@@ -44,4 +45,10 @@ private:
 	QueueFamilies		m_physicalDeviceQueueFamilies = {};
 	Queues				m_queues = {};
 	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
+
+#ifdef NDEBUG
+	const bool enableValidationLayers = false;
+#else
+	const bool enableValidationLayers = true;
+#endif
 };

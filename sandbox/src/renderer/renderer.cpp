@@ -60,8 +60,19 @@ void Renderer::createVkInstance()
 	createInfo.ppEnabledExtensionNames = instanceExtentions.data();
 
 	//-- This variable we will use to enable validation layers
-	createInfo.enabledLayerCount = 0;
-	createInfo.ppEnabledLayerNames = 0;
+
+	std::vector<const char*> validationLayers;
+	if (enableValidationLayers)
+	{
+		validationLayers.push_back("VK_LAYER_KHRONOS_validation");		
+		checkValidationLayerSupport(validationLayers);
+		createInfo.enabledLayerCount = validationLayers.size();
+	}
+	else
+	{
+		createInfo.enabledLayerCount = 0;
+	}
+	createInfo.ppEnabledLayerNames = validationLayers.data();
 
 	//-- Create instance
 	VkResult res = vkCreateInstance(&createInfo, nullptr, &m_vkInstance);
@@ -93,6 +104,30 @@ void Renderer::checkExtentionsSupport(const std::vector<const char*>& instanceEx
 		assert(itRes != extentionsProps.end());
 	}
 }
+
+void Renderer::checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
+{
+	uint32_t layerCount;
+	vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+	assert(layerCount >= validationLayerAppNeed.size());
+	std::vector<VkLayerProperties> availableLayers(layerCount);
+	vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+	for (const char* layer : validationLayerAppNeed)
+	{
+		auto itRes = std::ranges::find_if(availableLayers, [&](const VkLayerProperties& vkInst)
+			{
+				if (strcmp(vkInst.layerName, layer) == 0)
+				{
+					return true;
+				}
+				return false;
+			});
+		assert(itRes != availableLayers.end());
+	}
+}
+
 
 void Renderer::createLogicalDevice()
 {
