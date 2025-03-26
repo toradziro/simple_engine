@@ -5,15 +5,17 @@
 void Renderer::init(GLFWwindow* window)
 {
 	assert(window != nullptr);
-	//m_window = window;
+	m_window = window;
 
 	createVkInstance();
 	setupPhysicalDevice();
 	createLogicalDevice();
+	createSurface();
 }
 
 void Renderer::shutdown()
 {
+	vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
 	vkDestroyDevice(m_logicalDevice, nullptr);
 	vkDestroyInstance(m_vkInstance, nullptr);
 }
@@ -162,6 +164,20 @@ void Renderer::createLogicalDevice()
 		, m_physicalDeviceQueueFamilies.m_graphicQueue
 		, 0
 		, &m_queues.m_graphicQueue);
+}
+
+void Renderer::createSurface()
+{
+	VkResult result = glfwCreateWindowSurface(m_vkInstance, m_window, nullptr, &m_surface);
+	assert(result == VK_SUCCESS);
+
+	//-- Presentation support is to make sure we can swap an image from swapchain to the screen
+	VkBool32 presentSupport = VK_FALSE;
+	vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice
+		, m_physicalDeviceQueueFamilies.m_graphicQueue
+		, m_surface
+		, &presentSupport);
+	assert(presentSupport == VK_TRUE);
 }
 
 void Renderer::setupPhysicalDevice()

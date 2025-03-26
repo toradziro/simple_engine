@@ -32,19 +32,22 @@ private:
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
 
 	void	createLogicalDevice();
+	void	createSurface();
 
 	void							setupPhysicalDevice();
 	std::pair<int, QueueFamilies>	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const;
 	QueueFamilies					checkQueueFamilies(VkPhysicalDevice device) const;
 
 private:
-	//GLFWwindow*	m_window = nullptr;
+	GLFWwindow*			m_window = nullptr;
 
 	VkInstance			m_vkInstance = VK_NULL_HANDLE;
 	VkPhysicalDevice	m_physicalDevice = VK_NULL_HANDLE;
 	QueueFamilies		m_physicalDeviceQueueFamilies = {};
 	Queues				m_queues = {};
 	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
+
+	VkSurfaceKHR		m_surface = {};
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
