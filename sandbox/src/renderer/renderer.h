@@ -7,10 +7,12 @@
 struct QueueFamilies
 {
 	int	m_graphicQueue = -1;
+	int	m_presentationQueue = -1;
 
 	bool isValid() const
 	{
-		return m_graphicQueue >= 0;
+		return m_graphicQueue >= 0
+			&& m_presentationQueue >= 0;
 	}
 };
 
@@ -22,6 +24,8 @@ struct Queues
 class Renderer
 {
 public:
+	~Renderer();
+
 	void init(GLFWwindow* window);
 	void shutdown();
 	void update(float /*dt*/);
@@ -47,7 +51,7 @@ private:
 	Queues				m_queues = {};
 	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
 
-	VkSurfaceKHR		m_surface = {};
+	VkSurfaceKHR		m_surface = VK_NULL_HANDLE;
 
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;

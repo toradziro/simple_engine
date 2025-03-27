@@ -2,22 +2,48 @@
 #include <assert.h>
 #include <ranges>
 
+Renderer::~Renderer()
+{
+	shutdown();
+}
+
 void Renderer::init(GLFWwindow* window)
 {
 	assert(window != nullptr);
 	m_window = window;
 
 	createVkInstance();
+	//-- Create surface earlier than other devices types since we need it
+	//-- in checking queue that can support presentation operations
+	createSurface();
 	setupPhysicalDevice();
 	createLogicalDevice();
-	createSurface();
 }
 
 void Renderer::shutdown()
 {
-	vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
-	vkDestroyDevice(m_logicalDevice, nullptr);
-	vkDestroyInstance(m_vkInstance, nullptr);
+	//if (m_swapChain != VK_NULL_HANDLE) {
+		//vkDestroySwapchainKHR(m_logicalDevice, m_swapChain, nullptr);
+		//m_swapChain = VK_NULL_HANDLE;
+	//}
+
+	if (m_logicalDevice != VK_NULL_HANDLE)
+	{
+		vkDestroyDevice(m_logicalDevice, nullptr);
+		m_logicalDevice = VK_NULL_HANDLE;
+	}
+
+	if (m_surface != VK_NULL_HANDLE)
+	{
+		vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
+		m_surface = VK_NULL_HANDLE;
+	}
+
+	if (m_vkInstance != VK_NULL_HANDLE)
+	{
+		vkDestroyInstance(m_vkInstance, nullptr);
+		m_vkInstance = VK_NULL_HANDLE;
+	}
 }
 
 void Renderer::update(float /*dt*/)
@@ -170,14 +196,6 @@ void Renderer::createSurface()
 {
 	VkResult result = glfwCreateWindowSurface(m_vkInstance, m_window, nullptr, &m_surface);
 	assert(result == VK_SUCCESS);
-
-	//-- Presentation support is to make sure we can swap an image from swapchain to the screen
-	VkBool32 presentSupport = VK_FALSE;
-	vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice
-		, m_physicalDeviceQueueFamilies.m_graphicQueue
-		, m_surface
-		, &presentSupport);
-	assert(presentSupport == VK_TRUE);
 }
 
 void Renderer::setupPhysicalDevice()
@@ -222,11 +240,24 @@ QueueFamilies Renderer::checkQueueFamilies(VkPhysicalDevice device) const
 	int index = 0;
 	for (auto& familyProp : queueFamilyProps)
 	{
-		//-- Check if queue has graphic family and queue count is not zero
-		if (familyProp.queueCount > 0 && !!(familyProp.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+		if (familyProp.queueCount > 0)
 		{
-			//-- Remember that queue index to work with that later
-			queueFamilies.m_graphicQueue = index;
+			//-- Check if queue has graphic family and queue count is not zero
+			if (!!(familyProp.queueFlags & VK_QUEUE_GRAPHICS_BIT))
+			{
+				//-- Remember that queue index to work with that later
+				queueFamilies.m_graphicQueue = index;
+			}
+
+			VkBool32 presentSupport = VK_FALSE;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device
+				, index
+				, m_surface
+				, &presentSupport);
+			if (presentSupport == VK_TRUE)
+			{
+				queueFamilies.m_presentationQueue = index;
+			}
 		}
 		if (queueFamilies.isValid())
 		{
