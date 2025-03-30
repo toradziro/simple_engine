@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <array>
 
 struct QueueFamilies
 {
@@ -25,6 +26,8 @@ struct Queues
 class Renderer
 {
 public:
+	constexpr static inline int C_DEVICE_EXTEINTIONS_COUNT = 1;
+
 	~Renderer();
 
 	void init(GLFWwindow* window);
@@ -37,6 +40,7 @@ private:
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
 
 	void	createLogicalDevice();
+	void	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed) const;
 	void	createSurface();
 
 	void							setupPhysicalDevice();

@@ -35,10 +35,6 @@ void checkLibs()
 		{
 			std::cerr << "Failed to enumerate Vulkan version!" << std::endl;
 		}
-
-		uint32_t extentionsSupportedCount = 0;
-		vkEnumerateInstanceExtensionProperties(nullptr, &extentionsSupportedCount, nullptr);
-		std::cout << std::format("Extentions conunt: {}\n", extentionsSupportedCount);
 	}
 
 	//-- glfw check

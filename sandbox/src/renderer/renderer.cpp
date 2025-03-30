@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <ranges>
 #include <set>
+#include <string>
 
 Renderer::~Renderer()
 {
@@ -93,7 +94,7 @@ void Renderer::createVkInstance()
 	std::vector<const char*> validationLayers;
 	if (enableValidationLayers)
 	{
-		validationLayers.push_back("VK_LAYER_KHRONOS_validation");		
+		validationLayers.push_back("VK_LAYER_KHRONOS_validation");
 		checkValidationLayerSupport(validationLayers);
 		createInfo.enabledLayerCount = validationLayers.size();
 	}
@@ -181,13 +182,19 @@ void Renderer::createLogicalDevice()
 		queuesCreateInfos.push_back(queueCreateInfo);
 	}
 
+	//-- Device extentions
+	constexpr std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	};
+	checkDeviceExtentionsSupport(deviceExtentions);
+
 	//-- Device info itself
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
 	deviceCreateInfo.pQueueCreateInfos = queuesCreateInfos.data();
-	deviceCreateInfo.enabledExtensionCount = 0;
-	deviceCreateInfo.ppEnabledExtensionNames = nullptr;
+	deviceCreateInfo.enabledExtensionCount = C_DEVICE_EXTEINTIONS_COUNT;
+	deviceCreateInfo.ppEnabledExtensionNames = deviceExtentions.data();
 
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
@@ -209,6 +216,32 @@ void Renderer::createLogicalDevice()
 		, m_physicalDeviceQueueFamilies.m_presentationQueue
 		, 0
 		, &m_queues.m_presentationQueue);
+}
+
+void Renderer::checkDeviceExtentionsSupport(
+	const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed) const
+{
+	uint32_t extentionsCount = 0;
+	vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extentionsCount, nullptr);
+
+	assert(extentionsCount >= deviceExtentionsAppNeed.size());
+	std::vector<VkExtensionProperties> extentionsProps;
+	//-- resize becuse we need to move current size to max extentions othervise standard functions are not gonna work properly
+	extentionsProps.resize(extentionsCount);
+	vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extentionsCount, extentionsProps.data());
+
+	for (const char* extention : deviceExtentionsAppNeed)
+	{
+		auto itRes = std::ranges::find_if(extentionsProps, [&](const VkExtensionProperties& vkInst)
+			{
+				if (strcmp(vkInst.extensionName, extention) == 0)
+				{
+					return true;
+				}
+				return false;
+			});
+		assert(itRes != extentionsProps.end());
+	}
 }
 
 void Renderer::createSurface()
