@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include <assert.h>
 #include <ranges>
+#include <set>
 
 Renderer::~Renderer()
 {
@@ -159,19 +160,32 @@ void Renderer::checkValidationLayerSupport(const std::vector<const char*>& valid
 
 void Renderer::createLogicalDevice()
 {
-	//-- Queue for device info
-	VkDeviceQueueCreateInfo queueCreateInfo = {};
-	queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queueCreateInfo.queueFamilyIndex = m_physicalDeviceQueueFamilies.m_graphicQueue;
-	queueCreateInfo.queueCount = 1;
-	float priority = 1.0f;
-	queueCreateInfo.pQueuePriorities = &priority;
+	//-- Vector for queue creation information and set to avoid duplication same queue
+	std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
+	std::set<int> queueFamilyIdices = {
+		m_physicalDeviceQueueFamilies.m_graphicQueue
+		, m_physicalDeviceQueueFamilies.m_presentationQueue
+	};
+	queuesCreateInfos.reserve(queueFamilyIdices.size());
+
+	for (int queueIndex : queueFamilyIdices)
+	{
+		//-- Queue creation info
+		VkDeviceQueueCreateInfo queueCreateInfo = {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = queueIndex;
+		queueCreateInfo.queueCount = 1;
+		float priority = 1.0f;
+		queueCreateInfo.pQueuePriorities = &priority;
+
+		queuesCreateInfos.push_back(queueCreateInfo);
+	}
 
 	//-- Device info itself
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	deviceCreateInfo.queueCreateInfoCount = 1;
-	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+	deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
+	deviceCreateInfo.pQueueCreateInfos = queuesCreateInfos.data();
 	deviceCreateInfo.enabledExtensionCount = 0;
 	deviceCreateInfo.ppEnabledExtensionNames = nullptr;
 
@@ -190,6 +204,11 @@ void Renderer::createLogicalDevice()
 		, m_physicalDeviceQueueFamilies.m_graphicQueue
 		, 0
 		, &m_queues.m_graphicQueue);
+
+	vkGetDeviceQueue(m_logicalDevice
+		, m_physicalDeviceQueueFamilies.m_presentationQueue
+		, 0
+		, &m_queues.m_presentationQueue);
 }
 
 void Renderer::createSurface()

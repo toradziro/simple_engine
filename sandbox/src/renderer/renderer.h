@@ -19,6 +19,7 @@ struct QueueFamilies
 struct Queues
 {
 	VkQueue	m_graphicQueue;
+	VkQueue	m_presentationQueue;
 };
 
 class Renderer
@@ -54,8 +55,8 @@ private:
 	VkSurfaceKHR		m_surface = VK_NULL_HANDLE;
 
 #ifdef NDEBUG
-	const bool enableValidationLayers = false;
+	const bool			enableValidationLayers = false;
 #else
-	const bool enableValidationLayers = true;
+	const bool			enableValidationLayers = true;
 #endif
 };
