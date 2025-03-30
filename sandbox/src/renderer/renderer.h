@@ -40,7 +40,8 @@ private:
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
 
 	void	createLogicalDevice();
-	void	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed) const;
+	bool	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed
+										, VkPhysicalDevice physicalDevice) const;
 	void	createSurface();
 
 	void							setupPhysicalDevice();

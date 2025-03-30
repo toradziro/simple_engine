@@ -3,6 +3,16 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <iostream>
+#include <format>
+
+namespace
+{
+
+constexpr std::array<const char*, Renderer::C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions{
+	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+};
+}
 
 Renderer::~Renderer()
 {
@@ -182,18 +192,12 @@ void Renderer::createLogicalDevice()
 		queuesCreateInfos.push_back(queueCreateInfo);
 	}
 
-	//-- Device extentions
-	constexpr std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	};
-	checkDeviceExtentionsSupport(deviceExtentions);
-
 	//-- Device info itself
 	VkDeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	deviceCreateInfo.queueCreateInfoCount = queuesCreateInfos.size();
 	deviceCreateInfo.pQueueCreateInfos = queuesCreateInfos.data();
-	deviceCreateInfo.enabledExtensionCount = C_DEVICE_EXTEINTIONS_COUNT;
+	deviceCreateInfo.enabledExtensionCount = deviceExtentions.size();
 	deviceCreateInfo.ppEnabledExtensionNames = deviceExtentions.data();
 
 	VkPhysicalDeviceFeatures deviceFeatures = {};
@@ -218,17 +222,21 @@ void Renderer::createLogicalDevice()
 		, &m_queues.m_presentationQueue);
 }
 
-void Renderer::checkDeviceExtentionsSupport(
-	const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed) const
+bool Renderer::checkDeviceExtentionsSupport(
+	const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed
+	, VkPhysicalDevice physicalDevice) const
 {
 	uint32_t extentionsCount = 0;
-	vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extentionsCount, nullptr);
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extentionsCount, nullptr);
 
-	assert(extentionsCount >= deviceExtentionsAppNeed.size());
+	if (extentionsCount < deviceExtentionsAppNeed.size())
+	{
+		return false;
+	}
 	std::vector<VkExtensionProperties> extentionsProps;
 	//-- resize becuse we need to move current size to max extentions othervise standard functions are not gonna work properly
 	extentionsProps.resize(extentionsCount);
-	vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &extentionsCount, extentionsProps.data());
+	vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extentionsCount, extentionsProps.data());
 
 	for (const char* extention : deviceExtentionsAppNeed)
 	{
@@ -240,8 +248,12 @@ void Renderer::checkDeviceExtentionsSupport(
 				}
 				return false;
 			});
-		assert(itRes != extentionsProps.end());
+		if (itRes == extentionsProps.end())
+		{
+			return false;
+		}
 	}
+	return true;
 }
 
 void Renderer::createSurface()
@@ -272,6 +284,15 @@ void Renderer::setupPhysicalDevice()
 			m_physicalDeviceQueueFamilies = queueFamilies;
 		}
 	}
+
+	{
+		VkPhysicalDeviceProperties properties = {};
+		vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
+		
+		std::cout << std::format("Chosen physical device name name: {}"
+			, properties.deviceName) << std::endl;
+	}
+
 	assert(bestScore > 0);
 	assert(m_physicalDevice != VK_NULL_HANDLE);
 	assert(m_physicalDeviceQueueFamilies.isValid());
@@ -332,6 +353,12 @@ std::pair<int, QueueFamilies> Renderer::checkIfPhysicalDeviceSuitable(VkPhysical
 
 	QueueFamilies queueFamilies = checkQueueFamilies(device);
 	if (queueFamilies.isValid())
+	{
+		score += 10;
+	}
+
+	//-- Device extentions
+	if (checkDeviceExtentionsSupport(deviceExtentions, device))
 	{
 		score += 10;
 	}
