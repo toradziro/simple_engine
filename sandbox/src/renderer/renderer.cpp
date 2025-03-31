@@ -174,8 +174,8 @@ void Renderer::createLogicalDevice()
 	//-- Vector for queue creation information and set to avoid duplication same queue
 	std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
 	std::set<int> queueFamilyIdices = {
-		m_physicalDeviceQueueFamilies.m_graphicQueue
-		, m_physicalDeviceQueueFamilies.m_presentationQueue
+		m_chosenDeviceData.m_queueFamilies.m_graphicQueue
+		, m_chosenDeviceData.m_queueFamilies.m_presentationQueue
 	};
 	queuesCreateInfos.reserve(queueFamilyIdices.size());
 
@@ -212,12 +212,12 @@ void Renderer::createLogicalDevice()
 
 	//-- Queues are created automatically, we save it
 	vkGetDeviceQueue(m_logicalDevice
-		, m_physicalDeviceQueueFamilies.m_graphicQueue
+		, m_chosenDeviceData.m_queueFamilies.m_graphicQueue
 		, 0
 		, &m_queues.m_graphicQueue);
 
 	vkGetDeviceQueue(m_logicalDevice
-		, m_physicalDeviceQueueFamilies.m_presentationQueue
+		, m_chosenDeviceData.m_queueFamilies.m_presentationQueue
 		, 0
 		, &m_queues.m_presentationQueue);
 }
@@ -275,13 +275,13 @@ void Renderer::setupPhysicalDevice()
 	for (VkPhysicalDevice& device : physDevices)
 	{
 		//-- Looking for the best device
-		auto [currScore, queueFamilies] = checkIfPhysicalDeviceSuitable(device);
+		PhysicalDeviceData physDeviceData = checkIfPhysicalDeviceSuitable(device);
 
-		if (currScore > bestScore)
+		if (physDeviceData.m_score > bestScore)
 		{
-			bestScore = currScore;
+			bestScore = physDeviceData.m_score;
 			m_physicalDevice = device;
-			m_physicalDeviceQueueFamilies = queueFamilies;
+			m_chosenDeviceData = physDeviceData;
 		}
 	}
 
@@ -295,7 +295,10 @@ void Renderer::setupPhysicalDevice()
 
 	assert(bestScore > 0);
 	assert(m_physicalDevice != VK_NULL_HANDLE);
-	assert(m_physicalDeviceQueueFamilies.isValid());
+	assert(m_chosenDeviceData.m_queueFamilies.isValid());
+	//-- Maybe check if it supports specific modes we wanna see like mailbox & RGB8UNORM
+	assert(!m_chosenDeviceData.m_swapchainDetails.m_presentMode.empty());
+	assert(!m_chosenDeviceData.m_swapchainDetails.m_surfaceFormat.empty());
 }
 
 QueueFamilies Renderer::checkQueueFamilies(VkPhysicalDevice device) const
@@ -344,34 +347,71 @@ QueueFamilies Renderer::checkQueueFamilies(VkPhysicalDevice device) const
 	return queueFamilies;
 }
 
-std::pair<int, QueueFamilies> Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const
+SwapChainDetails Renderer::swapchainDetails(VkPhysicalDevice device) const
 {
-	int score = 0;
+	SwapChainDetails details;
+	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.m_surfaceCapabilities);
+
+	{
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
+		if (formatCount != 0)
+		{
+			details.m_surfaceFormat.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.m_surfaceFormat.data());
+		}
+	}
+
+	{
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, nullptr);
+		if (presentModeCount != 0)
+		{
+			details.m_presentMode.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &presentModeCount, details.m_presentMode.data());
+		}
+	}
+
+	return details;
+}
+
+PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const
+{
+	PhysicalDeviceData data;
 
 	VkPhysicalDeviceProperties properties = {};
 	vkGetPhysicalDeviceProperties(device, &properties);
 
-	QueueFamilies queueFamilies = checkQueueFamilies(device);
-	if (queueFamilies.isValid())
+	data.m_queueFamilies = checkQueueFamilies(device);
+	if (data.m_queueFamilies.isValid())
 	{
-		score += 10;
+		data.m_score += 10;
 	}
 
 	//-- Device extentions
 	if (checkDeviceExtentionsSupport(deviceExtentions, device))
 	{
-		score += 10;
+		data.m_score += 10;
+	}
+
+	data.m_swapchainDetails = swapchainDetails(device);
+	bool swapchainValid = !data.m_swapchainDetails.m_presentMode.empty()
+		&& !data.m_swapchainDetails.m_surfaceFormat.empty();
+
+	if (swapchainValid)
+	{
+		data.m_score += 10;
 	}
 
 	//-- Prefer discrete videocard but only if it fits by queues reqs
-	if (score > 0 && properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+	if (data.m_score > 0 && properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
 	{
-		score += 1;
+		data.m_score += 1;
 	}
 
 	//-- Information about what device can do (geom shaders, tess shaders, wide lines, etc)
 	VkPhysicalDeviceFeatures deviceFeatures = {};
 	vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
-	return { score, queueFamilies };
+	return data;
 }

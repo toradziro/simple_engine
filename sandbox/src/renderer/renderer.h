@@ -23,6 +23,23 @@ struct Queues
 	VkQueue	m_presentationQueue;
 };
 
+struct SwapChainDetails
+{
+	//-- Surface props such as size and buffer images count
+	VkSurfaceCapabilitiesKHR		m_surfaceCapabilities;
+	//-- Format such as RGBA8
+	std::vector<VkSurfaceFormatKHR>	m_surfaceFormat;
+	//-- Supported presentation modes to choose
+	std::vector<VkPresentModeKHR>	m_presentMode;
+};
+
+struct PhysicalDeviceData
+{
+	int					m_score = 0;
+	QueueFamilies		m_queueFamilies;
+	SwapChainDetails	m_swapchainDetails;
+};
+
 class Renderer
 {
 public:
@@ -35,6 +52,7 @@ public:
 	void update(float /*dt*/);
 
 private:
+
 	void	createVkInstance();
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
@@ -44,16 +62,18 @@ private:
 										, VkPhysicalDevice physicalDevice) const;
 	void	createSurface();
 
-	void							setupPhysicalDevice();
-	std::pair<int, QueueFamilies>	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const;
-	QueueFamilies					checkQueueFamilies(VkPhysicalDevice device) const;
+	void				setupPhysicalDevice();
+	PhysicalDeviceData	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const;
+	QueueFamilies		checkQueueFamilies(VkPhysicalDevice device) const;
+
+	SwapChainDetails	swapchainDetails(VkPhysicalDevice device) const;
 
 private:
 	GLFWwindow*			m_window = nullptr;
 
 	VkInstance			m_vkInstance = VK_NULL_HANDLE;
 	VkPhysicalDevice	m_physicalDevice = VK_NULL_HANDLE;
-	QueueFamilies		m_physicalDeviceQueueFamilies = {};
+	PhysicalDeviceData	m_chosenDeviceData = {};
 	Queues				m_queues = {};
 	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
 
