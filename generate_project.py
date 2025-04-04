@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 def check_vulkan_sdk():
-    vulkan_sdk_path = os.environ.get('VULKAN_SDK_PATH')
+    vulkan_sdk_path = os.environ.get('VULKAN_SDK')
     if not vulkan_sdk_path:
-        print("Error: The environment variable VULKAN_SDK_PATH is not set.")
+        print("Error: The environment variable VULKAN_SDK is not set.")
         print("Please set VULKAN_SDK_PATH to the path of the Vulkan SDK.")
         sys.exit(1)
     print(f"Vulkan SDK detected: {vulkan_sdk_path}")
@@ -18,7 +18,7 @@ def create_build_directory():
     """Creates the build directory if it does not exist."""
     build_dir = Path('build')
     if not build_dir.exists():
-        print("Создание директории build...")
+        print("Creating directory build...")
         build_dir.mkdir()
     return build_dir
 

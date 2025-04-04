@@ -22,17 +22,17 @@ if(MSVC)
 endif()
 
 # Set Vulkan SDK
-if(NOT DEFINED ENV{VULKAN_SDK_PATH})
-    message(FATAL_ERROR "Set VULKAN_SDK_PATH variable")
+if(NOT DEFINED ENV{VULKAN_SDK})
+    message(FATAL_ERROR "Set VULKAN_SDK variable")
 else()
-    set(VULKAN_SDK_PATH $ENV{VULKAN_SDK_PATH})
-    message(STATUS "Vulkan path is: ${VULKAN_SDK_PATH}")
+    set(VULKAN_SDK $ENV{VULKAN_SDK})
+    message(STATUS "Vulkan path is: ${VULKAN_SDK}")
 endif()
 
 # Set includes
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW/include")
 set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/glm")
-set(VULKAN_INCLUDE_DIR "${VULKAN_SDK_PATH}/Include")
+set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
 
 # Set GLFW
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_ALL)
@@ -74,7 +74,7 @@ target_include_directories(sandbox PRIVATE
 )
 
 # Vulkan path
-set(VULKAN_LIB_DIR "${VULKAN_SDK_PATH}/Lib")
+set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
 target_link_directories(sandbox PRIVATE ${VULKAN_LIB_DIR})
 
 # Add libs
