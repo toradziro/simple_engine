@@ -26,7 +26,7 @@ struct Queues
 struct SwapChainDetails
 {
 	//-- Surface props such as size and buffer images count
-	VkSurfaceCapabilitiesKHR		m_surfaceCapabilities;
+	VkSurfaceCapabilitiesKHR		m_surfaceCapabilities = {};
 	//-- Format such as RGBA8
 	std::vector<VkSurfaceFormatKHR>	m_surfaceFormat;
 	//-- Supported presentation modes to choose
@@ -54,29 +54,31 @@ public:
 private:
 
 	void	createVkInstance();
+	void	createLogicalDevice();
+	void	createSurface();
+	void	createSwapchain();
+	void	setupPhysicalDevice();
+
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
-
-	void	createLogicalDevice();
 	bool	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed
 										, VkPhysicalDevice physicalDevice) const;
-	void	createSurface();
-
-	void				setupPhysicalDevice();
+	
 	PhysicalDeviceData	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const;
 	QueueFamilies		checkQueueFamilies(VkPhysicalDevice device) const;
-
 	SwapChainDetails	swapchainDetails(VkPhysicalDevice device) const;
 
-private:
-	GLFWwindow*			m_window = nullptr;
+	VkSurfaceFormatKHR	chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& supportedFormats);
+	VkPresentModeKHR	choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+	VkExtent2D			chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+private:
+	PhysicalDeviceData	m_physicalDeviceData = {};
+	Queues				m_queues = {};
+	GLFWwindow*			m_window = nullptr;
 	VkInstance			m_vkInstance = VK_NULL_HANDLE;
 	VkPhysicalDevice	m_physicalDevice = VK_NULL_HANDLE;
-	PhysicalDeviceData	m_chosenDeviceData = {};
-	Queues				m_queues = {};
 	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
-
 	VkSurfaceKHR		m_surface = VK_NULL_HANDLE;
 
 #ifdef NDEBUG

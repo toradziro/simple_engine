@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <format>
+#include <algorithm>
 
 namespace
 {
@@ -12,6 +13,7 @@ namespace
 constexpr std::array<const char*, Renderer::C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions{
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
+
 }
 
 Renderer::~Renderer()
@@ -30,6 +32,7 @@ void Renderer::init(GLFWwindow* window)
 	createSurface();
 	setupPhysicalDevice();
 	createLogicalDevice();
+	createSwapchain();
 }
 
 void Renderer::shutdown()
@@ -168,14 +171,13 @@ void Renderer::checkValidationLayerSupport(const std::vector<const char*>& valid
 	}
 }
 
-
 void Renderer::createLogicalDevice()
 {
 	//-- Vector for queue creation information and set to avoid duplication same queue
 	std::vector<VkDeviceQueueCreateInfo> queuesCreateInfos;
 	std::set<int> queueFamilyIdices = {
-		m_chosenDeviceData.m_queueFamilies.m_graphicQueue
-		, m_chosenDeviceData.m_queueFamilies.m_presentationQueue
+		m_physicalDeviceData.m_queueFamilies.m_graphicQueue
+		, m_physicalDeviceData.m_queueFamilies.m_presentationQueue
 	};
 	queuesCreateInfos.reserve(queueFamilyIdices.size());
 
@@ -212,12 +214,12 @@ void Renderer::createLogicalDevice()
 
 	//-- Queues are created automatically, we save it
 	vkGetDeviceQueue(m_logicalDevice
-		, m_chosenDeviceData.m_queueFamilies.m_graphicQueue
+		, m_physicalDeviceData.m_queueFamilies.m_graphicQueue
 		, 0
 		, &m_queues.m_graphicQueue);
 
 	vkGetDeviceQueue(m_logicalDevice
-		, m_chosenDeviceData.m_queueFamilies.m_presentationQueue
+		, m_physicalDeviceData.m_queueFamilies.m_presentationQueue
 		, 0
 		, &m_queues.m_presentationQueue);
 }
@@ -262,6 +264,21 @@ void Renderer::createSurface()
 	assert(result == VK_SUCCESS);
 }
 
+void Renderer::createSwapchain()
+{
+	//-- VkSurfaceCapabilitiesKHR
+	//-- VkSurfaceFormatKHR 
+	//-- VkPresentModeKHR
+	SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
+	
+	VkSurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceFormat);
+	VkPresentModeKHR	presentMode = choosePresentMode(swaphainDetails.m_presentMode);
+	VkExtent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
+
+	//VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
+	//swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+}
+
 void Renderer::setupPhysicalDevice()
 {
 	uint32_t deviceCount = 0;
@@ -281,7 +298,7 @@ void Renderer::setupPhysicalDevice()
 		{
 			bestScore = physDeviceData.m_score;
 			m_physicalDevice = device;
-			m_chosenDeviceData = physDeviceData;
+			m_physicalDeviceData = physDeviceData;
 		}
 	}
 
@@ -295,10 +312,10 @@ void Renderer::setupPhysicalDevice()
 
 	assert(bestScore > 0);
 	assert(m_physicalDevice != VK_NULL_HANDLE);
-	assert(m_chosenDeviceData.m_queueFamilies.isValid());
+	assert(m_physicalDeviceData.m_queueFamilies.isValid());
 	//-- Maybe check if it supports specific modes we wanna see like mailbox & RGB8UNORM
-	assert(!m_chosenDeviceData.m_swapchainDetails.m_presentMode.empty());
-	assert(!m_chosenDeviceData.m_swapchainDetails.m_surfaceFormat.empty());
+	assert(!m_physicalDeviceData.m_swapchainDetails.m_presentMode.empty());
+	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceFormat.empty());
 }
 
 QueueFamilies Renderer::checkQueueFamilies(VkPhysicalDevice device) const
@@ -375,6 +392,54 @@ SwapChainDetails Renderer::swapchainDetails(VkPhysicalDevice device) const
 	return details;
 }
 
+VkSurfaceFormatKHR Renderer::chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& supportedFormats)
+{
+	for (const auto& availableFormat : supportedFormats)
+	{
+		//-- BGR and nonlinear color space is the best for small indie game
+		//-- since it's usually supported by the most monitors
+		if ((availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB || availableFormat.format == VK_FORMAT_R8G8B8A8_SRGB)
+			&& availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+		{
+			return availableFormat;
+		}
+	}
+	return supportedFormats[0];
+}
+
+VkPresentModeKHR Renderer::choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes)
+{
+	//-- Looking for MAILBOX (best for games)
+	//-- Tripple buffering, update on vertical blank and no tearing can be observed
+	for (const auto& mode : availablePresentModes)
+	{
+		if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
+		{
+			return mode;
+		}
+	}
+	//-- If there's no MAILBOX use FIFO (always available by specification)
+	//-- "This is the only value of presentMode that is required to be supported."
+	return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D Renderer::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+{
+	//-- If currExtent is max - than it will be handeled by surface
+	if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+	{
+		return capabilities.currentExtent;
+	}
+	int width = 0;
+	int height = 0;;
+	glfwGetFramebufferSize(m_window, &width, &height);
+	VkExtent2D ret = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+	ret.width = std::clamp(ret.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+	ret.height = std::clamp(ret.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+	return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+}
+
 PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const
 {
 	PhysicalDeviceData data;
@@ -397,7 +462,6 @@ PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice devi
 	data.m_swapchainDetails = swapchainDetails(device);
 	bool swapchainValid = !data.m_swapchainDetails.m_presentMode.empty()
 		&& !data.m_swapchainDetails.m_surfaceFormat.empty();
-
 	if (swapchainValid)
 	{
 		data.m_score += 10;
@@ -410,8 +474,8 @@ PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice devi
 	}
 
 	//-- Information about what device can do (geom shaders, tess shaders, wide lines, etc)
-	VkPhysicalDeviceFeatures deviceFeatures = {};
-	vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+	//VkPhysicalDeviceFeatures deviceFeatures = {};
+	//vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
 	return data;
 }
