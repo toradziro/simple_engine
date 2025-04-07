@@ -37,10 +37,11 @@ void Renderer::init(GLFWwindow* window)
 
 void Renderer::shutdown()
 {
-	//if (m_swapChain != VK_NULL_HANDLE) {
-		//vkDestroySwapchainKHR(m_logicalDevice, m_swapChain, nullptr);
-		//m_swapChain = VK_NULL_HANDLE;
-	//}
+	if (m_swapchain != VK_NULL_HANDLE)
+	{
+		vkDestroySwapchainKHR(m_logicalDevice, m_swapchain, nullptr);
+		m_swapchain = VK_NULL_HANDLE;
+	}
 
 	if (m_logicalDevice != VK_NULL_HANDLE)
 	{
@@ -269,14 +270,53 @@ void Renderer::createSwapchain()
 	//-- VkSurfaceCapabilitiesKHR
 	//-- VkSurfaceFormatKHR 
 	//-- VkPresentModeKHR
-	SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
+	const SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 	
-	VkSurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceFormat);
-	VkPresentModeKHR	presentMode = choosePresentMode(swaphainDetails.m_presentMode);
-	VkExtent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
+	const VkSurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceFormat);
+	const VkPresentModeKHR		presentMode = choosePresentMode(swaphainDetails.m_presentMode);
+	const VkExtent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
 
-	//VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
-	//swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	VkSwapchainCreateInfoKHR swapChainCreateInfo = {};
+	swapChainCreateInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	swapChainCreateInfo.imageFormat = surfaceFormat.format;
+	swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
+	swapChainCreateInfo.presentMode = presentMode;
+	swapChainCreateInfo.imageExtent = extent;
+	swapChainCreateInfo.minImageCount = std::clamp(swaphainDetails.m_surfaceCapabilities.minImageCount + 1
+		, swaphainDetails.m_surfaceCapabilities.minImageCount
+		, swaphainDetails.m_surfaceCapabilities.maxImageCount);
+	swapChainCreateInfo.imageArrayLayers = 1;
+	swapChainCreateInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+	swapChainCreateInfo.preTransform = swaphainDetails.m_surfaceCapabilities.currentTransform;
+	swapChainCreateInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	swapChainCreateInfo.clipped = VK_TRUE;
+
+	const QueueFamilies& families = m_physicalDeviceData.m_queueFamilies;
+
+	if (families.m_graphicQueue != families.m_presentationQueue)
+	{
+		const std::array<uint32_t, 2> indicies = {
+			static_cast<uint32_t>(families.m_graphicQueue),
+			static_cast<uint32_t>(families.m_presentationQueue)
+		};
+		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+		swapChainCreateInfo.queueFamilyIndexCount = 2;
+		swapChainCreateInfo.pQueueFamilyIndices = indicies.data();
+	}
+	else
+	{
+		swapChainCreateInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		swapChainCreateInfo.queueFamilyIndexCount = 0;
+		swapChainCreateInfo.pQueueFamilyIndices = nullptr;
+	}
+	swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
+	swapChainCreateInfo.surface = m_surface;
+
+	VkResult res = vkCreateSwapchainKHR(m_logicalDevice
+		, &swapChainCreateInfo
+		, nullptr
+		, &m_swapchain);
+	assert(res == VK_SUCCESS);
 }
 
 void Renderer::setupPhysicalDevice()
@@ -430,14 +470,19 @@ VkExtent2D Renderer::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capab
 	{
 		return capabilities.currentExtent;
 	}
+
 	int width = 0;
 	int height = 0;;
 	glfwGetFramebufferSize(m_window, &width, &height);
 	VkExtent2D ret = { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-	ret.width = std::clamp(ret.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-	ret.height = std::clamp(ret.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+	ret.width = std::clamp(ret.width
+		, capabilities.minImageExtent.width
+		, capabilities.maxImageExtent.width);
+	ret.height = std::clamp(ret.height
+		, capabilities.minImageExtent.height
+		, capabilities.maxImageExtent.height);
 
-	return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+	return ret;
 }
 
 PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const
