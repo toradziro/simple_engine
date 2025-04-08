@@ -23,12 +23,18 @@ struct Queues
 	VkQueue	m_presentationQueue;
 };
 
+struct SwapchainImage
+{
+	VkImage		m_image		= VK_NULL_HANDLE;
+	VkImageView	m_imageView	= VK_NULL_HANDLE;
+};
+
 struct SwapChainDetails
 {
 	//-- Surface props such as size and buffer images count
 	VkSurfaceCapabilitiesKHR		m_surfaceCapabilities = {};
 	//-- Format such as RGBA8
-	std::vector<VkSurfaceFormatKHR>	m_surfaceFormat;
+	std::vector<VkSurfaceFormatKHR>	m_surfaceSupportedFormats;
 	//-- Supported presentation modes to choose
 	std::vector<VkPresentModeKHR>	m_presentMode;
 };
@@ -72,15 +78,22 @@ private:
 	VkPresentModeKHR	choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
 	VkExtent2D			chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
+	VkImageView			createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+
 private:
-	PhysicalDeviceData	m_physicalDeviceData = {};
-	Queues				m_queues = {};
-	GLFWwindow*			m_window = nullptr;
-	VkInstance			m_vkInstance = VK_NULL_HANDLE;
-	VkPhysicalDevice	m_physicalDevice = VK_NULL_HANDLE;
-	VkDevice			m_logicalDevice = VK_NULL_HANDLE;
-	VkSurfaceKHR		m_surface = VK_NULL_HANDLE;
-	VkSwapchainKHR		m_swapchain = VK_NULL_HANDLE;
+	PhysicalDeviceData			m_physicalDeviceData = {};
+	std::vector<SwapchainImage>	m_swapchainImages = {};
+	Queues						m_queues = {};
+	GLFWwindow*					m_window = nullptr;
+	VkInstance					m_vkInstance = VK_NULL_HANDLE;
+	VkPhysicalDevice			m_physicalDevice = VK_NULL_HANDLE;
+	VkDevice					m_logicalDevice = VK_NULL_HANDLE;
+	VkSurfaceKHR				m_surface = VK_NULL_HANDLE;
+	VkSwapchainKHR				m_swapchain = VK_NULL_HANDLE;
+
+	VkSurfaceFormatKHR			m_surfaceFormat = {};
+	VkExtent2D					m_imageExtent;
+	VkPresentModeKHR			m_presentMode;
 
 #ifdef NDEBUG
 	const bool			enableValidationLayers = false;

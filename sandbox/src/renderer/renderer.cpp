@@ -37,6 +37,11 @@ void Renderer::init(GLFWwindow* window)
 
 void Renderer::shutdown()
 {
+	for (auto& [_, imageView] : m_swapchainImages)
+	{
+		vkDestroyImageView(m_logicalDevice, imageView, nullptr);
+	}
+
 	if (m_swapchain != VK_NULL_HANDLE)
 	{
 		vkDestroySwapchainKHR(m_logicalDevice, m_swapchain, nullptr);
@@ -272,7 +277,7 @@ void Renderer::createSwapchain()
 	//-- VkPresentModeKHR
 	const SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 	
-	const VkSurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceFormat);
+	const VkSurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceSupportedFormats);
 	const VkPresentModeKHR		presentMode = choosePresentMode(swaphainDetails.m_presentMode);
 	const VkExtent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
 
@@ -317,6 +322,24 @@ void Renderer::createSwapchain()
 		, nullptr
 		, &m_swapchain);
 	assert(res == VK_SUCCESS);
+
+	uint32_t swapchainImagesCount = 0;
+	vkGetSwapchainImagesKHR(m_logicalDevice, m_swapchain, &swapchainImagesCount, nullptr);
+	std::vector<VkImage> images(swapchainImagesCount);
+	vkGetSwapchainImagesKHR(m_logicalDevice, m_swapchain, &swapchainImagesCount, images.data());
+
+	m_swapchainImages.reserve(swapchainImagesCount);
+	for (auto& image : images)
+	{
+		m_swapchainImages.push_back({
+				.m_image = image,
+				.m_imageView = createImageView(image, surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT)
+			});
+	}
+
+	m_surfaceFormat = surfaceFormat;
+	m_presentMode = presentMode;
+	m_imageExtent = extent;
 }
 
 void Renderer::setupPhysicalDevice()
@@ -355,7 +378,7 @@ void Renderer::setupPhysicalDevice()
 	assert(m_physicalDeviceData.m_queueFamilies.isValid());
 	//-- Maybe check if it supports specific modes we wanna see like mailbox & RGB8UNORM
 	assert(!m_physicalDeviceData.m_swapchainDetails.m_presentMode.empty());
-	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceFormat.empty());
+	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
 }
 
 QueueFamilies Renderer::checkQueueFamilies(VkPhysicalDevice device) const
@@ -414,8 +437,11 @@ SwapChainDetails Renderer::swapchainDetails(VkPhysicalDevice device) const
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, nullptr);
 		if (formatCount != 0)
 		{
-			details.m_surfaceFormat.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &formatCount, details.m_surfaceFormat.data());
+			details.m_surfaceSupportedFormats.resize(formatCount);
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device
+				, m_surface
+				, &formatCount
+				, details.m_surfaceSupportedFormats.data());
 		}
 	}
 
@@ -485,6 +511,29 @@ VkExtent2D Renderer::chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capab
 	return ret;
 }
 
+VkImageView Renderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
+{
+	VkImageViewCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	createInfo.image = image;
+	createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	createInfo.format = format;
+	createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+	createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+
+	createInfo.subresourceRange.aspectMask = aspectFlags;
+	createInfo.subresourceRange.baseMipLevel = 0;
+	createInfo.subresourceRange.layerCount = 1;
+	createInfo.subresourceRange.levelCount = 1;
+	createInfo.subresourceRange.baseArrayLayer = 0;
+
+	VkImageView res = {};
+	assert(vkCreateImageView(m_logicalDevice, &createInfo, nullptr, &res) == VK_SUCCESS);
+	return res;
+}
+
 PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const
 {
 	PhysicalDeviceData data;
@@ -506,7 +555,7 @@ PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(VkPhysicalDevice devi
 
 	data.m_swapchainDetails = swapchainDetails(device);
 	bool swapchainValid = !data.m_swapchainDetails.m_presentMode.empty()
-		&& !data.m_swapchainDetails.m_surfaceFormat.empty();
+		&& !data.m_swapchainDetails.m_surfaceSupportedFormats.empty();
 	if (swapchainValid)
 	{
 		data.m_score += 10;

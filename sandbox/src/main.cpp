@@ -36,8 +36,6 @@ int main(int argc, char** argv)
 		glfwSwapBuffers(win);
 	}
 
-	renderer.shutdown();
-
 	glfwDestroyWindow(win);
 
 	glfwTerminate();
