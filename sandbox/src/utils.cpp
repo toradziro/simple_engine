@@ -9,6 +9,7 @@
 
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
+#include <shaderc/shaderc.hpp>
 
 void checkLibs()
 {
@@ -41,5 +42,10 @@ void checkLibs()
 	{
 		const char* version = glfwGetVersionString();
 		std::cout << "GLFW Version: " << version << std::endl;
+	}
+
+	{
+		shaderc::Compiler compiler;
+		std::cout << std::format("Shaderc compiler call: {}", compiler.IsValid()) << std::endl;
 	}
 }

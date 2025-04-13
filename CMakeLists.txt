@@ -33,9 +33,13 @@ endif()
 set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW/include")
 set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/glm")
 set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
+set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc/libshaderc/include")
 
 # Set GLFW
+set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_ALL)
+set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc" EXCLUDE_FROM_ALL)
 
 # Main project
 add_executable(sandbox)
@@ -71,6 +75,7 @@ target_include_directories(sandbox PRIVATE
     ${GLFW_INCLUDE_DIR}
     ${GLM_INCLUDE_DIR}
     ${VULKAN_INCLUDE_DIR}
+    ${SHADERC_INCLUDE_DIR}
 )
 
 # Vulkan path
@@ -78,7 +83,7 @@ set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
 target_link_directories(sandbox PRIVATE ${VULKAN_LIB_DIR})
 
 # Add libs
-target_link_libraries(sandbox PRIVATE glfw vulkan-1)
+target_link_libraries(sandbox PRIVATE glfw vulkan-1 shaderc)
 
 # Win defines
 if(WIN32)
@@ -94,7 +99,7 @@ set_target_properties(sandbox PROPERTIES
 # Debug config
 target_compile_options(sandbox PRIVATE 
     $<$<CONFIG:Debug>:
-        $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MDd>
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MTd>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O0>
     >
 )
@@ -102,7 +107,7 @@ target_compile_options(sandbox PRIVATE
 # Release config
 target_compile_options(sandbox PRIVATE 
     $<$<CONFIG:Release>:
-        $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MD>
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MT>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O2>
     >
 )
