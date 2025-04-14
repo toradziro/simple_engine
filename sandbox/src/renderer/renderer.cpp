@@ -6,13 +6,42 @@
 #include <iostream>
 #include <format>
 #include <algorithm>
+#include <filesystem>
+#include <cstdio>
+#include <fstream>
+#include <shaderc/shaderc.hpp>
 
 namespace
 {
 
-constexpr std::array<const char*, Renderer::C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions{
+constexpr std::array<const char*, Renderer::C_DEVICE_EXTEINTIONS_COUNT> deviceExtentions
+{
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 };
+
+std::vector<uint32_t> compileShaderFromSource(const std::string& source,
+	shaderc_shader_kind kind,
+	const std::string& name)
+{
+	shaderc::Compiler		compiler;
+	shaderc::CompileOptions	options;
+
+	options.SetOptimizationLevel(shaderc_optimization_level_performance);
+
+	auto result = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
+
+	assert(result.GetCompilationStatus() == shaderc_compilation_status_success);
+
+	// Spirv binary code
+	return { result.cbegin(), result.cend() };
+}
+
+std::string readFile(const std::string& path)
+{
+	std::ifstream file(path, std::ios::binary);
+	assert(file.is_open() && "Failed to open file");
+	return { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
+}
 
 }
 
@@ -33,6 +62,7 @@ void Renderer::init(GLFWwindow* window)
 	setupPhysicalDevice();
 	createLogicalDevice();
 	createSwapchain();
+	createPipeline();
 }
 
 void Renderer::shutdown()
@@ -340,6 +370,30 @@ void Renderer::createSwapchain()
 	m_surfaceFormat = surfaceFormat;
 	m_presentMode = presentMode;
 	m_imageExtent = extent;
+}
+
+void Renderer::createPipeline()
+{
+	constexpr auto C_V_SHADER = "shaders/hello.vert";
+	constexpr auto C_F_SHADER = "shaders/hello.frag";
+
+	auto curr_path = std::filesystem::current_path();
+	auto root_path = curr_path.parent_path();
+
+	auto full_vertex_shader_path = root_path / C_V_SHADER;
+	auto full_fragment_shader_path = root_path / C_F_SHADER;
+
+	std::cout << std::format("Vertex Shader path: '{}'", full_vertex_shader_path.generic_string()) << std::endl;
+	std::cout << std::format("Fragment Shader path: '{}'", full_fragment_shader_path.generic_string()) << std::endl;
+
+	std::vector<uint32_t> compiled_vertex_shader = compileShaderFromSource(
+		readFile(full_vertex_shader_path.generic_string()), shaderc_vertex_shader, "test_vertex_shader"
+	);
+	std::vector<uint32_t> compiled_fragment_shader = compileShaderFromSource(
+		readFile(full_fragment_shader_path.generic_string()), shaderc_fragment_shader, "test_fragment_shader"
+	);
+
+	std::cout << "Sucessfully compiled shaders" << std::endl;
 }
 
 void Renderer::setupPhysicalDevice()

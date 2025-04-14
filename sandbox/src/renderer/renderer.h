@@ -63,6 +63,7 @@ private:
 	void	createLogicalDevice();
 	void	createSurface();
 	void	createSwapchain();
+	void	createPipeline();
 	void	setupPhysicalDevice();
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
