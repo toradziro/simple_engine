@@ -63,6 +63,7 @@ private:
 	void	createLogicalDevice();
 	void	createSurface();
 	void	createSwapchain();
+	void	createShaderModule();
 	void	createPipeline();
 	void	setupPhysicalDevice();
 
@@ -71,15 +72,15 @@ private:
 	bool	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed
 										, VkPhysicalDevice physicalDevice) const;
 	
-	PhysicalDeviceData	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const;
-	QueueFamilies		checkQueueFamilies(VkPhysicalDevice device) const;
-	SwapChainDetails	swapchainDetails(VkPhysicalDevice device) const;
+	auto	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const -> PhysicalDeviceData;
+	auto	checkQueueFamilies(VkPhysicalDevice device) const -> QueueFamilies;
+	auto	swapchainDetails(VkPhysicalDevice device) const -> SwapChainDetails;
 
-	VkSurfaceFormatKHR	chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& supportedFormats);
-	VkPresentModeKHR	choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-	VkExtent2D			chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+	auto	chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& supportedFormats) -> VkSurfaceFormatKHR;
+	auto	choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) -> VkPresentModeKHR;
+	auto	chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) -> VkExtent2D;
 
-	VkImageView			createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
+	auto	createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) -> VkImageView;
 
 private:
 	PhysicalDeviceData			m_physicalDeviceData = {};
@@ -91,6 +92,8 @@ private:
 	VkDevice					m_logicalDevice = VK_NULL_HANDLE;
 	VkSurfaceKHR				m_surface = VK_NULL_HANDLE;
 	VkSwapchainKHR				m_swapchain = VK_NULL_HANDLE;
+	VkShaderModule				m_vertexShaderModule = VK_NULL_HANDLE;
+	VkShaderModule				m_fragmentShaderModule = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR			m_surfaceFormat = {};
 	VkExtent2D					m_imageExtent;

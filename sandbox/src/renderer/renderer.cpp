@@ -38,9 +38,21 @@ std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 
 std::string readFile(const std::string& path)
 {
-	std::ifstream file(path, std::ios::binary);
-	assert(file.is_open() && "Failed to open file");
-	return { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
+	std::ifstream file(path, std::ios::binary | std::ios::ate);
+	assert(file && file.is_open());
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::string buffer;
+	buffer.resize(size);
+
+	if (!file.read(buffer.data(), size))
+	{
+		assert(false);
+	}
+
+	return buffer;
 }
 
 }
@@ -62,11 +74,20 @@ void Renderer::init(GLFWwindow* window)
 	setupPhysicalDevice();
 	createLogicalDevice();
 	createSwapchain();
+	createShaderModule();
 	createPipeline();
 }
 
 void Renderer::shutdown()
 {
+	if (m_vertexShaderModule != VK_NULL_HANDLE)
+	{
+		vkDestroyShaderModule(m_logicalDevice, m_vertexShaderModule, nullptr);
+	}
+	if (m_fragmentShaderModule != VK_NULL_HANDLE)
+	{
+		vkDestroyShaderModule(m_logicalDevice, m_fragmentShaderModule, nullptr);
+	}
 	for (auto& [_, imageView] : m_swapchainImages)
 	{
 		vkDestroyImageView(m_logicalDevice, imageView, nullptr);
@@ -372,7 +393,7 @@ void Renderer::createSwapchain()
 	m_imageExtent = extent;
 }
 
-void Renderer::createPipeline()
+void Renderer::createShaderModule()
 {
 	constexpr auto C_V_SHADER = "shaders/hello.vert";
 	constexpr auto C_F_SHADER = "shaders/hello.frag";
@@ -394,6 +415,23 @@ void Renderer::createPipeline()
 	);
 
 	std::cout << "Sucessfully compiled shaders" << std::endl;
+
+	VkShaderModuleCreateInfo vertexShaderModuleCreateInfo = {};
+	vertexShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	vertexShaderModuleCreateInfo.codeSize = compiled_vertex_shader.size() * sizeof(uint32_t);
+	vertexShaderModuleCreateInfo.pCode = compiled_vertex_shader.data();
+	assert(vkCreateShaderModule(m_logicalDevice, &vertexShaderModuleCreateInfo, nullptr, &m_vertexShaderModule) == VK_SUCCESS);
+
+	VkShaderModuleCreateInfo fragmentShaderModuleCreateInfo = {};
+	fragmentShaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	fragmentShaderModuleCreateInfo.codeSize = compiled_fragment_shader.size() * sizeof(uint32_t);
+	fragmentShaderModuleCreateInfo.pCode = compiled_fragment_shader.data();
+	assert(vkCreateShaderModule(m_logicalDevice, &fragmentShaderModuleCreateInfo, nullptr, &m_fragmentShaderModule) == VK_SUCCESS);
+}
+
+void Renderer::createPipeline()
+{
+
 }
 
 void Renderer::setupPhysicalDevice()
