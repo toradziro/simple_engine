@@ -498,6 +498,18 @@ void Renderer::createPipeline()
 	rasterizerCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 	rasterizerCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 	rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
+
+	VkPipelineMultisampleStateCreateInfo multisampling = {};
+	multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multisampling.sampleShadingEnable = VK_FALSE;
+	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT
+		| VK_COLOR_COMPONENT_G_BIT
+		| VK_COLOR_COMPONENT_B_BIT
+		| VK_COLOR_COMPONENT_A_BIT;
+	colorBlendAttachment.blendEnable = VK_FALSE;
 }
 
 void Renderer::setupPhysicalDevice()
