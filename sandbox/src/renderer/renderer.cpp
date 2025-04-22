@@ -70,16 +70,39 @@ void Renderer::init(GLFWwindow* window)
 	createVkInstance();
 	//-- Create surface earlier than other devices types since we need it
 	//-- in checking queue that can support presentation operations
+	std::cout << "createSurface" << std::endl;
 	createSurface();
+	std::cout << "setupPhysicalDevice" << std::endl;
 	setupPhysicalDevice();
+	std::cout << "createLogicalDevice" << std::endl;
 	createLogicalDevice();
+	std::cout << "createSwapchain" << std::endl;
 	createSwapchain();
+	std::cout << "createShaderModule" << std::endl;
 	createShaderModule();
+	std::cout << "createRenderPass" << std::endl;
+	createRenderPass();
+	std::cout << "createPipeline" << std::endl;
 	createPipeline();
+	std::cout << "Vulkan objects initialized" << std::endl;
 }
 
 void Renderer::shutdown()
 {
+	if (m_pipelineLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyPipeline(m_logicalDevice, m_graphicsPipeline, nullptr);
+	}
+	if (m_pipelineLayout != VK_NULL_HANDLE)
+	{
+		vkDestroyPipelineLayout(m_logicalDevice, m_pipelineLayout, nullptr);
+	}
+
+	if (m_renderPass != VK_NULL_HANDLE)
+	{
+		vkDestroyRenderPass(m_logicalDevice, m_renderPass, nullptr);
+	}
+
 	if (m_vertexShaderModule != VK_NULL_HANDLE)
 	{
 		vkDestroyShaderModule(m_logicalDevice, m_vertexShaderModule, nullptr);
@@ -443,7 +466,7 @@ void Renderer::createPipeline()
 	fragmentShaderStageCreateInfo.module = m_fragmentShaderModule;
 	fragmentShaderStageCreateInfo.pName = "main";
 
-	std::array<VkPipelineShaderStageCreateInfo, 2> stages = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
+	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
 
 	//-- Create pipline now
 	//-- Vertex input
@@ -478,15 +501,15 @@ void Renderer::createPipeline()
 	viewportStateCreateInfo.pScissors = &scissor;
 
 	//-- DYNAMIC STATE
-	//const std::array<VkDynamicState, 2> dynamicStateEnables = {
-	//	VK_DYNAMIC_STATE_VIEWPORT //-- allow to resize in command buffer with vkCmdSetViewport
-	//	, VK_DYNAMIC_STATE_SCISSOR
-	//};
+	const std::array<VkDynamicState, 2> dynamicStateEnables = {
+		VK_DYNAMIC_STATE_VIEWPORT //-- allow to resize in command buffer with vkCmdSetViewport
+		, VK_DYNAMIC_STATE_SCISSOR
+	};
 
-	//VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
-	//dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	//dynamicStateCreateInfo.dynamicStateCount = dynamicStateEnables.size();
-	//dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
+	VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
+	dynamicStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamicStateCreateInfo.dynamicStateCount = dynamicStateEnables.size();
+	dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
 
 	//-- RASTERIZER
 	VkPipelineRasterizationStateCreateInfo rasterizerCreateInfo = {};
@@ -504,12 +527,91 @@ void Renderer::createPipeline()
 	multisampling.sampleShadingEnable = VK_FALSE;
 	multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT
 		| VK_COLOR_COMPONENT_G_BIT
 		| VK_COLOR_COMPONENT_B_BIT
 		| VK_COLOR_COMPONENT_A_BIT;
 	colorBlendAttachment.blendEnable = VK_FALSE;
+
+	//-- TODO: Check how to use it
+	VkPipelineColorBlendStateCreateInfo colorBlending = {};
+	colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	colorBlending.logicOpEnable = VK_FALSE;
+	colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+	colorBlending.attachmentCount = 1;
+	colorBlending.pAttachments = &colorBlendAttachment;
+
+	//-- We will need layout for uniforms
+	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipelineLayoutInfo.setLayoutCount = 0;				// Optional
+	pipelineLayoutInfo.pSetLayouts = nullptr;			// Optional
+	pipelineLayoutInfo.pushConstantRangeCount = 0;		// Optional
+	pipelineLayoutInfo.pPushConstantRanges = nullptr;	// Optional
+
+	assert(vkCreatePipelineLayout(m_logicalDevice
+		, &pipelineLayoutInfo
+		, nullptr
+		, &m_pipelineLayout) == VK_SUCCESS);
+
+	VkGraphicsPipelineCreateInfo pipelineInfo = {};
+	//-- Static part of pypline
+	pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipelineInfo.stageCount = 2;
+	pipelineInfo.pStages = shaderStages.data();
+	pipelineInfo.pVertexInputState = &vertexInputCreateInfo;
+	pipelineInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
+	pipelineInfo.pViewportState = &viewportStateCreateInfo;
+	pipelineInfo.pRasterizationState = &rasterizerCreateInfo;
+	pipelineInfo.pMultisampleState = &multisampling;
+	pipelineInfo.pDepthStencilState = nullptr; // Optional
+	pipelineInfo.pColorBlendState = &colorBlending;
+	pipelineInfo.pDynamicState = &dynamicStateCreateInfo;
+
+	//-- Layout, describing uniforms
+	pipelineInfo.layout = m_pipelineLayout;
+
+	//-- Render pass
+	pipelineInfo.renderPass = m_renderPass;
+	pipelineInfo.subpass = 0;
+	assert(vkCreateGraphicsPipelines(m_logicalDevice
+		, VK_NULL_HANDLE
+		, 1
+		, &pipelineInfo
+		, nullptr
+		, &m_graphicsPipeline) == VK_SUCCESS);
+}
+
+void Renderer::createRenderPass()
+{
+	VkAttachmentDescription colorAttachment = {};
+	colorAttachment.format = m_surfaceFormat.format;
+	colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference colorAttachmentRef = {};
+	colorAttachmentRef.attachment = 0;
+	colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &colorAttachmentRef;
+
+	VkRenderPassCreateInfo renderPassInfo{};
+	renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	renderPassInfo.attachmentCount = 1;
+	renderPassInfo.pAttachments = &colorAttachment;
+	renderPassInfo.subpassCount = 1;
+	renderPassInfo.pSubpasses = &subpass;
+
+	assert(vkCreateRenderPass(m_logicalDevice, &renderPassInfo, nullptr, &m_renderPass) == VK_SUCCESS);
 }
 
 void Renderer::setupPhysicalDevice()

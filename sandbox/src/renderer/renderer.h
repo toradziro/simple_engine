@@ -65,6 +65,7 @@ private:
 	void	createSwapchain();
 	void	createShaderModule();
 	void	createPipeline();
+	void	createRenderPass();
 	void	setupPhysicalDevice();
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
@@ -94,6 +95,9 @@ private:
 	VkSwapchainKHR				m_swapchain = VK_NULL_HANDLE;
 	VkShaderModule				m_vertexShaderModule = VK_NULL_HANDLE;
 	VkShaderModule				m_fragmentShaderModule = VK_NULL_HANDLE;
+	VkRenderPass				m_renderPass = VK_NULL_HANDLE;
+	VkPipelineLayout			m_pipelineLayout = VK_NULL_HANDLE;
+	VkPipeline					m_graphicsPipeline = VK_NULL_HANDLE;
 
 	VkSurfaceFormatKHR			m_surfaceFormat = {};
 	VkExtent2D					m_imageExtent;
