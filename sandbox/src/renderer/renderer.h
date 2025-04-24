@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+//#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <array>
@@ -66,6 +67,7 @@ private:
 	void	createShaderModule();
 	void	createPipeline();
 	void	createRenderPass();
+	void	createFramebuffer();
 	void	setupPhysicalDevice();
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
@@ -98,6 +100,7 @@ private:
 	VkRenderPass				m_renderPass = VK_NULL_HANDLE;
 	VkPipelineLayout			m_pipelineLayout = VK_NULL_HANDLE;
 	VkPipeline					m_graphicsPipeline = VK_NULL_HANDLE;
+	std::vector<VkFramebuffer>	m_swapChainFramebuffers;
 
 	VkSurfaceFormatKHR			m_surfaceFormat = {};
 	VkExtent2D					m_imageExtent;

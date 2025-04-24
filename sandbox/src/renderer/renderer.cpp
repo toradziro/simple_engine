@@ -1,4 +1,5 @@
 #include "renderer.h"
+
 #include <assert.h>
 #include <ranges>
 #include <set>
@@ -84,36 +85,52 @@ void Renderer::init(GLFWwindow* window)
 	createRenderPass();
 	std::cout << "createPipeline" << std::endl;
 	createPipeline();
+	std::cout << "createFramebuffer" << std::endl;
+	createFramebuffer();
 	std::cout << "Vulkan objects initialized" << std::endl;
 }
 
 void Renderer::shutdown()
 {
+	for (auto& framebuffer : m_swapChainFramebuffers)
+	{
+		if (framebuffer != VK_NULL_HANDLE)
+		{
+			vkDestroyFramebuffer(m_logicalDevice, framebuffer, nullptr);
+			framebuffer = VK_NULL_HANDLE;
+		}
+	}
 	if (m_pipelineLayout != VK_NULL_HANDLE)
 	{
 		vkDestroyPipeline(m_logicalDevice, m_graphicsPipeline, nullptr);
+		m_graphicsPipeline = VK_NULL_HANDLE;
 	}
 	if (m_pipelineLayout != VK_NULL_HANDLE)
 	{
 		vkDestroyPipelineLayout(m_logicalDevice, m_pipelineLayout, nullptr);
+		m_pipelineLayout = VK_NULL_HANDLE;
 	}
 
 	if (m_renderPass != VK_NULL_HANDLE)
 	{
 		vkDestroyRenderPass(m_logicalDevice, m_renderPass, nullptr);
+		m_renderPass = VK_NULL_HANDLE;
 	}
 
 	if (m_vertexShaderModule != VK_NULL_HANDLE)
 	{
 		vkDestroyShaderModule(m_logicalDevice, m_vertexShaderModule, nullptr);
+		m_vertexShaderModule = VK_NULL_HANDLE;
 	}
 	if (m_fragmentShaderModule != VK_NULL_HANDLE)
 	{
 		vkDestroyShaderModule(m_logicalDevice, m_fragmentShaderModule, nullptr);
+		m_fragmentShaderModule = VK_NULL_HANDLE;
 	}
 	for (auto& [_, imageView] : m_swapchainImages)
 	{
 		vkDestroyImageView(m_logicalDevice, imageView, nullptr);
+		imageView = VK_NULL_HANDLE;
 	}
 
 	if (m_swapchain != VK_NULL_HANDLE)
@@ -612,6 +629,28 @@ void Renderer::createRenderPass()
 	renderPassInfo.pSubpasses = &subpass;
 
 	assert(vkCreateRenderPass(m_logicalDevice, &renderPassInfo, nullptr, &m_renderPass) == VK_SUCCESS);
+}
+
+void Renderer::createFramebuffer()
+{
+	m_swapChainFramebuffers.resize(m_swapchainImages.size());
+	int i = 0;
+	for (const auto& [_, imageView] : m_swapchainImages)
+	{
+		std::array<VkImageView, 1> attachments = { imageView };
+
+		VkFramebufferCreateInfo framebufferInfo = {};
+		framebufferInfo.sType			= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.renderPass		= m_renderPass;
+		framebufferInfo.attachmentCount	= 1;
+		framebufferInfo.pAttachments	= attachments.data();
+		framebufferInfo.width			= m_imageExtent.width;
+		framebufferInfo.height			= m_imageExtent.height;
+		framebufferInfo.layers			= 1;
+
+		assert(vkCreateFramebuffer(m_logicalDevice, &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) == VK_SUCCESS);
+		++i;
+	}
 }
 
 void Renderer::setupPhysicalDevice()
