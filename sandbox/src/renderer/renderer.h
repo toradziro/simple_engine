@@ -1,7 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-//#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
 #include <array>
@@ -20,24 +19,24 @@ struct QueueFamilies
 
 struct Queues
 {
-	VkQueue	m_graphicQueue;
-	VkQueue	m_presentationQueue;
+	vk::Queue	m_graphicQueue;
+	vk::Queue	m_presentationQueue;
 };
 
 struct SwapchainImage
 {
-	VkImage		m_image		= VK_NULL_HANDLE;
-	VkImageView	m_imageView	= VK_NULL_HANDLE;
+	vk::Image		m_image		= VK_NULL_HANDLE;
+	vk::ImageView	m_imageView	= VK_NULL_HANDLE;
 };
 
 struct SwapChainDetails
 {
 	//-- Surface props such as size and buffer images count
-	VkSurfaceCapabilitiesKHR		m_surfaceCapabilities = {};
+	vk::SurfaceCapabilitiesKHR		m_surfaceCapabilities = {};
 	//-- Format such as RGBA8
-	std::vector<VkSurfaceFormatKHR>	m_surfaceSupportedFormats;
+	std::vector<vk::SurfaceFormatKHR>	m_surfaceSupportedFormats;
 	//-- Supported presentation modes to choose
-	std::vector<VkPresentModeKHR>	m_presentMode;
+	std::vector<vk::PresentModeKHR>	m_presentMode;
 };
 
 struct PhysicalDeviceData
@@ -50,8 +49,6 @@ struct PhysicalDeviceData
 class Renderer
 {
 public:
-	constexpr static inline int C_DEVICE_EXTEINTIONS_COUNT = 1;
-
 	~Renderer();
 
 	void init(GLFWwindow* window);
@@ -59,7 +56,6 @@ public:
 	void update(float /*dt*/);
 
 private:
-
 	void	createVkInstance();
 	void	createLogicalDevice();
 	void	createSurface();
@@ -68,43 +64,52 @@ private:
 	void	createPipeline();
 	void	createRenderPass();
 	void	createFramebuffer();
+	void	createCommandPool();
+	void	createCommandBuffer();
 	void	setupPhysicalDevice();
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
-	bool	checkDeviceExtentionsSupport(const std::array<const char*, C_DEVICE_EXTEINTIONS_COUNT>& deviceExtentionsAppNeed
-										, VkPhysicalDevice physicalDevice) const;
+	bool	checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExts, vk::PhysicalDevice physicalDevice) const;
 	
-	auto	checkIfPhysicalDeviceSuitable(VkPhysicalDevice device) const -> PhysicalDeviceData;
-	auto	checkQueueFamilies(VkPhysicalDevice device) const -> QueueFamilies;
-	auto	swapchainDetails(VkPhysicalDevice device) const -> SwapChainDetails;
+	auto	checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const -> PhysicalDeviceData;
+	auto	checkQueueFamilies(vk::PhysicalDevice device) const -> QueueFamilies;
+	auto	swapchainDetails(vk::PhysicalDevice device) const -> SwapChainDetails;
 
-	auto	chooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& supportedFormats) -> VkSurfaceFormatKHR;
-	auto	choosePresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) -> VkPresentModeKHR;
-	auto	chooseSwapChainExtent(const VkSurfaceCapabilitiesKHR& capabilities) -> VkExtent2D;
+	auto	chooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& supportedFormats) -> vk::SurfaceFormatKHR;
+	auto	choosePresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) -> vk::PresentModeKHR;
+	auto	chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) -> vk::Extent2D;
 
-	auto	createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) -> VkImageView;
+	auto	createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) -> vk::ImageView;
 
 private:
-	PhysicalDeviceData			m_physicalDeviceData = {};
-	std::vector<SwapchainImage>	m_swapchainImages = {};
-	Queues						m_queues = {};
-	GLFWwindow*					m_window = nullptr;
-	VkInstance					m_vkInstance = VK_NULL_HANDLE;
-	VkPhysicalDevice			m_physicalDevice = VK_NULL_HANDLE;
-	VkDevice					m_logicalDevice = VK_NULL_HANDLE;
-	VkSurfaceKHR				m_surface = VK_NULL_HANDLE;
-	VkSwapchainKHR				m_swapchain = VK_NULL_HANDLE;
-	VkShaderModule				m_vertexShaderModule = VK_NULL_HANDLE;
-	VkShaderModule				m_fragmentShaderModule = VK_NULL_HANDLE;
-	VkRenderPass				m_renderPass = VK_NULL_HANDLE;
-	VkPipelineLayout			m_pipelineLayout = VK_NULL_HANDLE;
-	VkPipeline					m_graphicsPipeline = VK_NULL_HANDLE;
-	std::vector<VkFramebuffer>	m_swapChainFramebuffers;
+	const std::vector<const char*> C_DEVICE_EXTENTIONS
+	{
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	};
 
-	VkSurfaceFormatKHR			m_surfaceFormat = {};
-	VkExtent2D					m_imageExtent;
-	VkPresentModeKHR			m_presentMode;
+private:
+	PhysicalDeviceData				m_physicalDeviceData = {};
+	std::vector<SwapchainImage>		m_swapchainImages = {};
+	Queues							m_queues = {};
+	GLFWwindow*						m_window = nullptr;
+	vk::Instance					m_vkInstance = VK_NULL_HANDLE;
+	vk::PhysicalDevice				m_physicalDevice = VK_NULL_HANDLE;
+	vk::Device						m_logicalDevice = VK_NULL_HANDLE;
+	vk::SurfaceKHR					m_surface = VK_NULL_HANDLE;
+	vk::SwapchainKHR				m_swapchain = VK_NULL_HANDLE;
+	vk::ShaderModule				m_vertexShaderModule = VK_NULL_HANDLE;
+	vk::ShaderModule				m_fragmentShaderModule = VK_NULL_HANDLE;
+	vk::RenderPass					m_renderPass = VK_NULL_HANDLE;
+	vk::PipelineLayout				m_pipelineLayout = VK_NULL_HANDLE;
+	vk::Pipeline					m_graphicsPipeline = VK_NULL_HANDLE;
+	vk::CommandPool					m_commandPool = VK_NULL_HANDLE;
+	vk::CommandBuffer				m_commandBuffer = VK_NULL_HANDLE;
+	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
+
+	vk::SurfaceFormatKHR			m_surfaceFormat = {};
+	vk::Extent2D					m_imageExtent;
+	vk::PresentModeKHR				m_presentMode;
 
 #ifdef NDEBUG
 	const bool			enableValidationLayers = false;
