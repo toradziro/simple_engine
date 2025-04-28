@@ -15,6 +15,8 @@
 namespace
 {
 
+#define VULKAN_CALL_CHECK(x) assert((x) == vk::Result::eSuccess)
+
 std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 	shaderc_shader_kind kind,
 	const std::string& name)
@@ -218,9 +220,7 @@ void Renderer::createVkInstance()
 	createInfo.ppEnabledLayerNames = validationLayers.data();
 
 	//-- Create instance
-	auto res = vk::createInstance(&createInfo, nullptr, &m_vkInstance);
-	assert(res == vk::Result::eSuccess);
-	assert(m_vkInstance != VK_NULL_HANDLE);
+	VULKAN_CALL_CHECK(vk::createInstance(&createInfo, nullptr, &m_vkInstance));
 }
 
 void Renderer::checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
@@ -284,10 +284,9 @@ void Renderer::createLogicalDevice()
 		.setPEnabledExtensionNames(C_DEVICE_EXTENTIONS);
 
 	//-- Creating logical device
-	vk::Result result = m_physicalDevice.createDevice(&deviceCreateInfo
+	VULKAN_CALL_CHECK(m_physicalDevice.createDevice(&deviceCreateInfo
 		, nullptr
-		, &m_logicalDevice);
-	assert(result == vk::Result::eSuccess);
+		, &m_logicalDevice));
 
 	//-- Queues are created automatically, we save it
 	m_logicalDevice.getQueue(m_physicalDeviceData.m_queueFamilies.m_graphicQueue
@@ -372,8 +371,9 @@ void Renderer::createSwapchain()
 	swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
 	swapChainCreateInfo.surface = m_surface;
 
-	vk::Result res = m_logicalDevice.createSwapchainKHR(&swapChainCreateInfo, nullptr, &m_swapchain);
-	assert(res == vk::Result::eSuccess);
+	VULKAN_CALL_CHECK(m_logicalDevice.createSwapchainKHR(&swapChainCreateInfo
+		, nullptr
+		, &m_swapchain));
 
 	std::vector<vk::Image> images = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
 	for (auto& image : images)
@@ -415,16 +415,16 @@ void Renderer::createShaderModule()
 	vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo = {};
 	vertexShaderModuleCreateInfo.codeSize = compiled_vertex_shader.size() * sizeof(uint32_t);
 	vertexShaderModuleCreateInfo.pCode = compiled_vertex_shader.data();
-	assert(m_logicalDevice.createShaderModule(&vertexShaderModuleCreateInfo
+	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&vertexShaderModuleCreateInfo
 		, nullptr
-		, &m_vertexShaderModule) == vk::Result::eSuccess);
+		, &m_vertexShaderModule));
 
 	vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo = {};
 	fragmentShaderModuleCreateInfo.codeSize = compiled_fragment_shader.size() * sizeof(uint32_t);
 	fragmentShaderModuleCreateInfo.pCode = compiled_fragment_shader.data();
-	assert(m_logicalDevice.createShaderModule(&fragmentShaderModuleCreateInfo
+	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&fragmentShaderModuleCreateInfo
 		, nullptr
-		, &m_fragmentShaderModule) == vk::Result::eSuccess);
+		, &m_fragmentShaderModule));
 }
 
 void Renderer::createPipeline()
@@ -515,9 +515,9 @@ void Renderer::createPipeline()
 	pipelineLayoutInfo.pushConstantRangeCount = 0;		// Optional
 	pipelineLayoutInfo.pPushConstantRanges = nullptr;	// Optional
 
-	assert(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
+	VULKAN_CALL_CHECK(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
 		, nullptr
-		, &m_pipelineLayout) == vk::Result::eSuccess);
+		, &m_pipelineLayout));
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 	//-- Static part of pypline
@@ -538,11 +538,11 @@ void Renderer::createPipeline()
 	//-- Render pass
 	pipelineInfo.renderPass = m_renderPass;
 	pipelineInfo.subpass = 0;
-	assert(m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
+	VULKAN_CALL_CHECK(m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
 		, 1
 		, &pipelineInfo
 		, nullptr
-		, &m_graphicsPipeline) == vk::Result::eSuccess);
+		, &m_graphicsPipeline));
 }
 
 void Renderer::createRenderPass()
@@ -572,9 +572,9 @@ void Renderer::createRenderPass()
 	renderPassInfo.subpassCount = 1;
 	renderPassInfo.pSubpasses = &subpass;
 
-	assert(m_logicalDevice.createRenderPass(&renderPassInfo
+	VULKAN_CALL_CHECK(m_logicalDevice.createRenderPass(&renderPassInfo
 			, nullptr
-			, &m_renderPass) == vk::Result::eSuccess);
+			, &m_renderPass));
 }
 
 void Renderer::createFramebuffer()
@@ -593,9 +593,9 @@ void Renderer::createFramebuffer()
 		framebufferInfo.height			= m_imageExtent.height;
 		framebufferInfo.layers			= 1;
 
-		assert(m_logicalDevice.createFramebuffer(&framebufferInfo
+		VULKAN_CALL_CHECK(m_logicalDevice.createFramebuffer(&framebufferInfo
 			, nullptr
-			, &m_swapChainFramebuffers[i]) == vk::Result::eSuccess);
+			, &m_swapChainFramebuffers[i]));
 
 		++i;
 	}
@@ -607,14 +607,20 @@ void Renderer::createCommandPool()
 	poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
 	poolInfo.queueFamilyIndex = m_physicalDeviceData.m_queueFamilies.m_graphicQueue;
 
-	assert(m_logicalDevice.createCommandPool(&poolInfo
+	VULKAN_CALL_CHECK(m_logicalDevice.createCommandPool(&poolInfo
 		, nullptr
-		, &m_commandPool) == vk::Result::eSuccess);
+		, &m_commandPool));
 }
 
 void Renderer::createCommandBuffer()
 {
+	vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
+	commandBufferAllocateInfo.setCommandBufferCount(1)
+		.setCommandPool(m_commandPool)
+		.setLevel(vk::CommandBufferLevel::ePrimary);
 
+	auto allocatedCommandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+	m_commandBuffer = *allocatedCommandBuffers.begin();
 }
 
 void Renderer::setupPhysicalDevice()
@@ -649,6 +655,39 @@ void Renderer::setupPhysicalDevice()
 	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
 }
 
+void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+{
+	vk::CommandBufferBeginInfo cmdBBeginfo = {};
+	VULKAN_CALL_CHECK(m_commandBuffer.begin(&cmdBBeginfo));
+
+	vk::RenderPassBeginInfo renderPassInfo = {};
+	vk::Rect2D renderArea = {};
+	vk::ClearValue clearValue = { vk::ClearColorValue(0.0f, 0.0f, 1.0f, 1.0f) };
+	renderArea.setOffset({ 0 , 0 }).setExtent(m_imageExtent);
+	renderPassInfo.setRenderPass(m_renderPass)
+		.setFramebuffer(m_swapChainFramebuffers[imageIndex])
+		.setRenderArea(renderArea)
+		.setClearValueCount(1)
+		.setClearValues({ clearValue });
+
+	m_commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+	m_commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
+	vk::Viewport viewport = {};
+	viewport.setX(0.0f).setY(0.0f)
+		.setWidth(m_imageExtent.width)
+		.setHeight(m_imageExtent.height)
+		.setMinDepth(0.0f)
+		.setMaxDepth(0.0f);
+	m_commandBuffer.setViewport(0, viewport);
+
+	vk::Rect2D scissor = {};
+	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
+	m_commandBuffer.setScissor(0, scissor);
+	m_commandBuffer.draw(3, 1, 0, 0);
+	m_commandBuffer.endRenderPass();
+	m_commandBuffer.end();
+}
+
 QueueFamilies Renderer::checkQueueFamilies(vk::PhysicalDevice device) const
 {
 	QueueFamilies queueFamilies = {};
@@ -667,9 +706,9 @@ QueueFamilies Renderer::checkQueueFamilies(vk::PhysicalDevice device) const
 			}
 
 			vk::Bool32 presentSupport = VK_FALSE;
-			assert(device.getSurfaceSupportKHR(index
+			VULKAN_CALL_CHECK(device.getSurfaceSupportKHR(index
 				, m_surface
-				, &presentSupport) == vk::Result::eSuccess);
+				, &presentSupport));
 			if (presentSupport == VK_TRUE)
 			{
 				queueFamilies.m_presentationQueue = index;
@@ -690,7 +729,7 @@ QueueFamilies Renderer::checkQueueFamilies(vk::PhysicalDevice device) const
 SwapChainDetails Renderer::swapchainDetails(vk::PhysicalDevice device) const
 {
 	SwapChainDetails details;
-	assert(device.getSurfaceCapabilitiesKHR(m_surface, &details.m_surfaceCapabilities) == vk::Result::eSuccess);
+	VULKAN_CALL_CHECK(device.getSurfaceCapabilitiesKHR(m_surface, &details.m_surfaceCapabilities));
 
 	details.m_surfaceSupportedFormats = device.getSurfaceFormatsKHR(m_surface);
 	details.m_presentMode = device.getSurfacePresentModesKHR(m_surface);
@@ -765,7 +804,7 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 	createInfo.subresourceRange.baseArrayLayer = 0;
 
 	vk::ImageView res = {};
-	assert(m_logicalDevice.createImageView(&createInfo, nullptr, &res) == vk::Result::eSuccess);
+	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo, nullptr, &res));
 	return res;
 }
 

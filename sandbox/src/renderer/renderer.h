@@ -66,7 +66,9 @@ private:
 	void	createFramebuffer();
 	void	createCommandPool();
 	void	createCommandBuffer();
-	void	setupPhysicalDevice();
+	void	setupPhysicalDevice(); 
+
+	void	recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
@@ -93,18 +95,18 @@ private:
 	std::vector<SwapchainImage>		m_swapchainImages = {};
 	Queues							m_queues = {};
 	GLFWwindow*						m_window = nullptr;
-	vk::Instance					m_vkInstance = VK_NULL_HANDLE;
-	vk::PhysicalDevice				m_physicalDevice = VK_NULL_HANDLE;
-	vk::Device						m_logicalDevice = VK_NULL_HANDLE;
-	vk::SurfaceKHR					m_surface = VK_NULL_HANDLE;
-	vk::SwapchainKHR				m_swapchain = VK_NULL_HANDLE;
-	vk::ShaderModule				m_vertexShaderModule = VK_NULL_HANDLE;
-	vk::ShaderModule				m_fragmentShaderModule = VK_NULL_HANDLE;
-	vk::RenderPass					m_renderPass = VK_NULL_HANDLE;
-	vk::PipelineLayout				m_pipelineLayout = VK_NULL_HANDLE;
-	vk::Pipeline					m_graphicsPipeline = VK_NULL_HANDLE;
-	vk::CommandPool					m_commandPool = VK_NULL_HANDLE;
-	vk::CommandBuffer				m_commandBuffer = VK_NULL_HANDLE;
+	vk::Instance					m_vkInstance = {};
+	vk::PhysicalDevice				m_physicalDevice = {};
+	vk::Device						m_logicalDevice = {};
+	vk::SurfaceKHR					m_surface = {};
+	vk::SwapchainKHR				m_swapchain = {};
+	vk::ShaderModule				m_vertexShaderModule = {};
+	vk::ShaderModule				m_fragmentShaderModule = {};
+	vk::RenderPass					m_renderPass = {};
+	vk::PipelineLayout				m_pipelineLayout = {};
+	vk::Pipeline					m_graphicsPipeline = {};
+	vk::CommandPool					m_commandPool = {};
+	vk::CommandBuffer				m_commandBuffer = {};
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
 
 	vk::SurfaceFormatKHR			m_surfaceFormat = {};
