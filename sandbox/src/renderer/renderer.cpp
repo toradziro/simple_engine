@@ -88,86 +88,75 @@ void Renderer::init(GLFWwindow* window)
 	createCommandPool();
 	std::cout << "createCommandBuffer" << std::endl;
 	createCommandBuffer();
+	std::cout << "createSyncObjects" << std::endl;
+	createSyncObjects();
 	std::cout << "Vulkan objects initialized" << std::endl;
 }
 
 void Renderer::shutdown()
 {
-	if (m_commandPool != VK_NULL_HANDLE)
-	{
-		vkDestroyCommandPool(m_logicalDevice, m_commandPool, nullptr);
-		m_commandPool = VK_NULL_HANDLE;
-	}
+	m_queues.m_graphicQueue.waitIdle();
+	m_queues.m_presentationQueue.waitIdle();
 
+	m_logicalDevice.destroySemaphore(m_imageAvailableSemaphore);
+	m_logicalDevice.destroySemaphore(m_renderFinishedSemaphore);
+	m_logicalDevice.destroyFence(m_inFlightFence);
+	m_logicalDevice.destroyCommandPool(m_commandPool);
 	for (auto& framebuffer : m_swapChainFramebuffers)
 	{
-		if (framebuffer != VK_NULL_HANDLE)
-		{
-			vkDestroyFramebuffer(m_logicalDevice, framebuffer, nullptr);
-			framebuffer = VK_NULL_HANDLE;
-		}
+		m_logicalDevice.destroyFramebuffer(framebuffer);
 	}
-	if (m_pipelineLayout != VK_NULL_HANDLE)
-	{
-		vkDestroyPipeline(m_logicalDevice, m_graphicsPipeline, nullptr);
-		m_graphicsPipeline = VK_NULL_HANDLE;
-	}
-	if (m_pipelineLayout != VK_NULL_HANDLE)
-	{
-		vkDestroyPipelineLayout(m_logicalDevice, m_pipelineLayout, nullptr);
-		m_pipelineLayout = VK_NULL_HANDLE;
-	}
-
-	if (m_renderPass != VK_NULL_HANDLE)
-	{
-		vkDestroyRenderPass(m_logicalDevice, m_renderPass, nullptr);
-		m_renderPass = VK_NULL_HANDLE;
-	}
-
-	if (m_vertexShaderModule != VK_NULL_HANDLE)
-	{
-		vkDestroyShaderModule(m_logicalDevice, m_vertexShaderModule, nullptr);
-		m_vertexShaderModule = VK_NULL_HANDLE;
-	}
-	if (m_fragmentShaderModule != VK_NULL_HANDLE)
-	{
-		vkDestroyShaderModule(m_logicalDevice, m_fragmentShaderModule, nullptr);
-		m_fragmentShaderModule = VK_NULL_HANDLE;
-	}
+	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
+	m_logicalDevice.destroyPipelineLayout(m_pipelineLayout);
+	m_logicalDevice.destroyRenderPass(m_renderPass);
+	m_logicalDevice.destroyShaderModule(m_vertexShaderModule);
+	m_logicalDevice.destroyShaderModule(m_fragmentShaderModule);
 	for (auto& [_, imageView] : m_swapchainImages)
 	{
-		vkDestroyImageView(m_logicalDevice, imageView, nullptr);
-		imageView = VK_NULL_HANDLE;
+		m_logicalDevice.destroyImageView(imageView);
 	}
-
-	if (m_swapchain != VK_NULL_HANDLE)
-	{
-		vkDestroySwapchainKHR(m_logicalDevice, m_swapchain, nullptr);
-		m_swapchain = VK_NULL_HANDLE;
-	}
-
-	if (m_logicalDevice != VK_NULL_HANDLE)
-	{
-		vkDestroyDevice(m_logicalDevice, nullptr);
-		m_logicalDevice = VK_NULL_HANDLE;
-	}
-
-	if (m_surface != VK_NULL_HANDLE)
-	{
-		vkDestroySurfaceKHR(m_vkInstance, m_surface, nullptr);
-		m_surface = VK_NULL_HANDLE;
-	}
-
-	if (m_vkInstance != VK_NULL_HANDLE)
-	{
-		vkDestroyInstance(m_vkInstance, nullptr);
-		m_vkInstance = VK_NULL_HANDLE;
-	}
+	m_logicalDevice.destroySwapchainKHR(m_swapchain);
+	m_logicalDevice.destroy();
+	
+	m_vkInstance.destroySurfaceKHR(m_surface);
+	m_vkInstance.destroy();
 }
 
-void Renderer::update(float /*dt*/)
+void Renderer::update(float dt)
 {
+	drawFrame(dt);
+}
 
+void Renderer::drawFrame(float /*dt*/)
+{
+	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFence, vk::True, UINT64_MAX));
+	m_logicalDevice.resetFences(m_inFlightFence);
+	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain, UINT64_MAX, m_imageAvailableSemaphore);
+	VULKAN_CALL_CHECK(result);
+	m_commandBuffer.reset();
+	recordCommandBuffer(m_commandBuffer, imageIndex);
+
+	//-- Submitting command buffer
+	vk::SubmitInfo submitInfo = {};
+	vk::PipelineStageFlags waitStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+	submitInfo.setWaitSemaphoreCount(1)
+		.setWaitSemaphores(m_imageAvailableSemaphore)
+		.setWaitDstStageMask(waitStages)
+		.setSignalSemaphoreCount(1)
+		.setSignalSemaphores(m_renderFinishedSemaphore)
+		.setCommandBufferCount(1)
+		.setCommandBuffers(m_commandBuffer);
+
+	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFence);
+
+	vk::PresentInfoKHR presentInfo = {};
+	presentInfo.setWaitSemaphoreCount(1)
+		.setWaitSemaphores(m_renderFinishedSemaphore)
+		.setSwapchainCount(1)
+		.setSwapchains(m_swapchain)
+		.setImageIndices(imageIndex);
+
+	[[maybe_unused]]auto res = m_queues.m_presentationQueue.presentKHR(presentInfo);
 }
 
 void Renderer::createVkInstance()
@@ -566,15 +555,25 @@ void Renderer::createRenderPass()
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &colorAttachmentRef;
 
+	vk::SubpassDependency dependency = {};
+	dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL)
+		.setDstSubpass(0)
+		.setSrcStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput)
+		.setDstAccessMask(vk::AccessFlagBits::eColorAttachmentWrite);
+
 	vk::RenderPassCreateInfo renderPassInfo = {};
-	renderPassInfo.attachmentCount = 1;
-	renderPassInfo.pAttachments = &colorAttachment;
-	renderPassInfo.subpassCount = 1;
-	renderPassInfo.pSubpasses = &subpass;
+	renderPassInfo.setAttachmentCount(1)
+		.setAttachments(colorAttachment)
+		.setSubpassCount(1)
+		.setSubpasses(subpass)
+		.setDependencyCount(1)
+		.setDependencies(dependency);
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createRenderPass(&renderPassInfo
 			, nullptr
 			, &m_renderPass));
+
 }
 
 void Renderer::createFramebuffer()
@@ -621,6 +620,15 @@ void Renderer::createCommandBuffer()
 
 	auto allocatedCommandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
 	m_commandBuffer = *allocatedCommandBuffers.begin();
+}
+
+void Renderer::createSyncObjects()
+{
+	m_imageAvailableSemaphore = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+	m_renderFinishedSemaphore = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+	vk::FenceCreateInfo fenceInfo = {};
+	fenceInfo.setFlags(vk::FenceCreateFlagBits::eSignaled);
+	m_inFlightFence = m_logicalDevice.createFence(fenceInfo);
 }
 
 void Renderer::setupPhysicalDevice()

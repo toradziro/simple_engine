@@ -32,11 +32,11 @@ struct SwapchainImage
 struct SwapChainDetails
 {
 	//-- Surface props such as size and buffer images count
-	vk::SurfaceCapabilitiesKHR		m_surfaceCapabilities = {};
+	vk::SurfaceCapabilitiesKHR			m_surfaceCapabilities ;
 	//-- Format such as RGBA8
 	std::vector<vk::SurfaceFormatKHR>	m_surfaceSupportedFormats;
 	//-- Supported presentation modes to choose
-	std::vector<vk::PresentModeKHR>	m_presentMode;
+	std::vector<vk::PresentModeKHR>		m_presentMode;
 };
 
 struct PhysicalDeviceData
@@ -56,6 +56,8 @@ public:
 	void update(float /*dt*/);
 
 private:
+	void	drawFrame(float /*dt*/);
+
 	void	createVkInstance();
 	void	createLogicalDevice();
 	void	createSurface();
@@ -66,6 +68,7 @@ private:
 	void	createFramebuffer();
 	void	createCommandPool();
 	void	createCommandBuffer();
+	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
 
 	void	recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
@@ -91,27 +94,31 @@ private:
 	};
 
 private:
-	PhysicalDeviceData				m_physicalDeviceData = {};
-	std::vector<SwapchainImage>		m_swapchainImages = {};
-	Queues							m_queues = {};
+	PhysicalDeviceData				m_physicalDeviceData;
+	std::vector<SwapchainImage>		m_swapchainImages;
+	Queues							m_queues;
 	GLFWwindow*						m_window = nullptr;
-	vk::Instance					m_vkInstance = {};
-	vk::PhysicalDevice				m_physicalDevice = {};
-	vk::Device						m_logicalDevice = {};
-	vk::SurfaceKHR					m_surface = {};
-	vk::SwapchainKHR				m_swapchain = {};
-	vk::ShaderModule				m_vertexShaderModule = {};
-	vk::ShaderModule				m_fragmentShaderModule = {};
-	vk::RenderPass					m_renderPass = {};
-	vk::PipelineLayout				m_pipelineLayout = {};
-	vk::Pipeline					m_graphicsPipeline = {};
-	vk::CommandPool					m_commandPool = {};
-	vk::CommandBuffer				m_commandBuffer = {};
+	vk::Instance					m_vkInstance;
+	vk::PhysicalDevice				m_physicalDevice;
+	vk::Device						m_logicalDevice;
+	vk::SurfaceKHR					m_surface;
+	vk::SwapchainKHR				m_swapchain;
+	vk::ShaderModule				m_vertexShaderModule;
+	vk::ShaderModule				m_fragmentShaderModule;
+	vk::RenderPass					m_renderPass;
+	vk::PipelineLayout				m_pipelineLayout;
+	vk::Pipeline					m_graphicsPipeline;
+	vk::CommandPool					m_commandPool;
+	vk::CommandBuffer				m_commandBuffer;
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
 
-	vk::SurfaceFormatKHR			m_surfaceFormat = {};
+	vk::SurfaceFormatKHR			m_surfaceFormat;
 	vk::Extent2D					m_imageExtent;
 	vk::PresentModeKHR				m_presentMode;
+
+	vk::Semaphore					m_imageAvailableSemaphore;
+	vk::Semaphore					m_renderFinishedSemaphore;
+	vk::Fence						m_inFlightFence;
 
 #ifdef NDEBUG
 	const bool			enableValidationLayers = false;
