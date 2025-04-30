@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+
 project(sandbox LANGUAGES CXX)
 
 # Set standard C++20
@@ -36,8 +37,9 @@ set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
 set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc/libshaderc/include")
 
 # Set GLFW
-set(USE_MSVC_RUNTIME_LIBRARY_DLL OFF CACHE BOOL "" FORCE)
+set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_ALL)
+set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc" EXCLUDE_FROM_ALL)
 
@@ -99,7 +101,7 @@ set_target_properties(sandbox PROPERTIES
 # Debug config
 target_compile_options(sandbox PRIVATE 
     $<$<CONFIG:Debug>:
-        $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MTd>
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MDd>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O0>
     >
 )
@@ -107,7 +109,7 @@ target_compile_options(sandbox PRIVATE
 # Release config
 target_compile_options(sandbox PRIVATE 
     $<$<CONFIG:Release>:
-        $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MT>
+        $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MD>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O2>
     >
 )

@@ -11,11 +11,32 @@
 #include <cstdio>
 #include <fstream>
 #include <shaderc/shaderc.hpp>
+#include <cstdlib>
+
+#pragma optimize("", off)
 
 namespace
 {
 
-#define VULKAN_CALL_CHECK(x) assert((x) == vk::Result::eSuccess)
+#ifdef NDEBUG
+#define VULKAN_CALL_CHECK(x) \
+do { \
+    vk::Result __res = (x); \
+    if (__res != vk::Result::eSuccess) { \
+        std::cerr << "Vulkan error: " << static_cast<int>(__res) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        throw std::runtime_error("Vulkan error"); \
+    } \
+} while(0)
+#else
+#define VULKAN_CALL_CHECK(x) \
+do { \
+    vk::Result __res = (x); \
+    if (__res != vk::Result::eSuccess) { \
+        std::cerr << "Vulkan error: " << static_cast<int>(__res) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        assert((x) == vk::Result::eSuccess); \
+    } \
+} while(0)
+#endif
 
 std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 	shaderc_shader_kind kind,
@@ -65,32 +86,40 @@ void Renderer::init(GLFWwindow* window)
 	assert(window != nullptr);
 	m_window = window;
 
-	createVkInstance();
-	//-- Create surface earlier than other devices types since we need it
-	//-- in checking queue that can support presentation operations
-	std::cout << "createSurface" << std::endl;
-	createSurface();
-	std::cout << "setupPhysicalDevice" << std::endl;
-	setupPhysicalDevice();
-	std::cout << "createLogicalDevice" << std::endl;
-	createLogicalDevice();
-	std::cout << "createSwapchain" << std::endl;
-	createSwapchain();
-	std::cout << "createShaderModule" << std::endl;
-	createShaderModule();
-	std::cout << "createRenderPass" << std::endl;
-	createRenderPass();
-	std::cout << "createPipeline" << std::endl;
-	createPipeline();
-	std::cout << "createFramebuffer" << std::endl;
-	createFramebuffer();
-	std::cout << "createCommandPool" << std::endl;
-	createCommandPool();
-	std::cout << "createCommandBuffer" << std::endl;
-	createCommandBuffer();
-	std::cout << "createSyncObjects" << std::endl;
-	createSyncObjects();
-	std::cout << "Vulkan objects initialized" << std::endl;
+	try
+	{
+		createVkInstance();
+		//-- Create surface earlier than other devices types since we need it
+		//-- in checking queue that can support presentation operations
+		std::cout << "createSurface" << std::endl;
+		createSurface();
+		std::cout << "setupPhysicalDevice" << std::endl;
+		setupPhysicalDevice();
+		std::cout << "createLogicalDevice" << std::endl;
+		createLogicalDevice();
+		std::cout << "createSwapchain" << std::endl;
+		createSwapchain();
+		std::cout << "createShaderModule" << std::endl;
+		createShaderModule();
+		std::cout << "createRenderPass" << std::endl;
+		createRenderPass();
+		std::cout << "createPipeline" << std::endl;
+		createPipeline();
+		std::cout << "createFramebuffer" << std::endl;
+		createFramebuffer();
+		std::cout << "createCommandPool" << std::endl;
+		createCommandPool();
+		std::cout << "createCommandBuffer" << std::endl;
+		createCommandBuffer();
+		std::cout << "createSyncObjects" << std::endl;
+		createSyncObjects();
+		std::cout << "Vulkan objects initialized" << std::endl;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error during initialization: " << e.what() << std::endl;
+		throw; // Re-throw to allow proper cleanup
+	}
 }
 
 void Renderer::shutdown()
@@ -164,22 +193,18 @@ void Renderer::createVkInstance()
 	//-- Instance creation info will need info about application
 	//-- Most info here for developer
 	vk::ApplicationInfo appInfo = {};
-	appInfo.pApplicationName = "Vulkan Study";
-	appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-	appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-	//-- This one is really important setting, this is vulkan apu version
-	appInfo.apiVersion = VK_API_VERSION_1_4;
+	appInfo.setPApplicationName("Vulkan Study")
+		.setApiVersion(VK_API_VERSION_1_3);
 
 	//-- Creation info for a vkInstance
 	vk::InstanceCreateInfo createInfo = {};
-	createInfo.pApplicationInfo = &appInfo;
+	createInfo.setPApplicationInfo(&appInfo);
 
 	//-- Create collection to hold instance extentions
 	std::vector<const char*> instanceExtentions;
 
 	uint32_t extentionsCount = 0;
 	const char** glfwExtentionsList = glfwGetRequiredInstanceExtensions(&extentionsCount);
-	assert(extentionsCount > 0);
 	instanceExtentions.reserve(extentionsCount);
 	for (uint32_t i = 0; i < extentionsCount; ++i)
 	{
@@ -190,23 +215,22 @@ void Renderer::createVkInstance()
 	checkExtentionsSupport(instanceExtentions);
 
 	//-- Set extentions we received from glfw
-	createInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtentions.size());
-	createInfo.ppEnabledExtensionNames = instanceExtentions.data();
+	createInfo.setEnabledExtensionCount(static_cast<uint32_t>(instanceExtentions.size()))
+		.setPEnabledExtensionNames(instanceExtentions);
 
 	//-- This variable we will use to enable validation layers
-
 	std::vector<const char*> validationLayers;
 	if (enableValidationLayers)
 	{
 		validationLayers.push_back("VK_LAYER_KHRONOS_validation");
 		checkValidationLayerSupport(validationLayers);
-		createInfo.enabledLayerCount = validationLayers.size();
+		createInfo.setEnabledLayerCount(validationLayers.size());
 	}
 	else
 	{
-		createInfo.enabledLayerCount = 0;
+		createInfo.setEnabledLayerCount(0);
 	}
-	createInfo.ppEnabledLayerNames = validationLayers.data();
+	createInfo.setPEnabledLayerNames(validationLayers);
 
 	//-- Create instance
 	VULKAN_CALL_CHECK(vk::createInstance(&createInfo, nullptr, &m_vkInstance));
@@ -264,12 +288,12 @@ void Renderer::createLogicalDevice()
 		vk::DeviceQueueCreateInfo queueCreateInfo({}, queueIndex, 1, &priority);
 		queuesCreateInfos.push_back(queueCreateInfo);
 	}
-
 	//-- Device info itself
 	vk::PhysicalDeviceFeatures deviceFeatures = {};
 	vk::DeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.setQueueCreateInfos(queuesCreateInfos)
 		.setPEnabledFeatures(&deviceFeatures)
+		.setEnabledExtensionCount(C_DEVICE_EXTENTIONS.size())
 		.setPEnabledExtensionNames(C_DEVICE_EXTENTIONS);
 
 	//-- Creating logical device
@@ -317,13 +341,19 @@ void Renderer::createSurface()
 	m_surface = vk::SurfaceKHR(rawSurface);
 }
 
+
+
 void Renderer::createSwapchain()
 {
 	const SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 	
+	std::cout << "here" << std::endl;
 	const vk::SurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceSupportedFormats);
+	std::cout << "here2" << std::endl;
 	const vk::PresentModeKHR	presentMode = choosePresentMode(swaphainDetails.m_presentMode);
+	std::cout << "here3" << std::endl;
 	const vk::Extent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
+	std::cout << "here4" << std::endl;
 
 	vk::SwapchainCreateInfoKHR swapChainCreateInfo = {};
 	swapChainCreateInfo.imageFormat = surfaceFormat.format;
@@ -473,7 +503,7 @@ void Renderer::createPipeline()
 	vk::PipelineRasterizationStateCreateInfo rasterizerCreateInfo = {};
 	rasterizerCreateInfo.depthClampEnable = VK_FALSE;
 	rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-	rasterizerCreateInfo.polygonMode = vk::PolygonMode::eFill;
+	rasterizerCreateInfo.polygonMode = vk::PolygonMode::eFill; //-- Try line
 	rasterizerCreateInfo.lineWidth = 1.0f;
 	rasterizerCreateInfo.cullMode = vk::CullModeFlagBits::eBack;
 	rasterizerCreateInfo.frontFace = vk::FrontFace::eClockwise;
@@ -670,7 +700,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 
 	vk::RenderPassBeginInfo renderPassInfo = {};
 	vk::Rect2D renderArea = {};
-	vk::ClearValue clearValue = { vk::ClearColorValue(0.0f, 0.0f, 1.0f, 1.0f) };
+	vk::ClearValue clearValue = { vk::ClearColorValue(0.2f, 0.2f, 0.2f, 1.0f) };
 	renderArea.setOffset({ 0 , 0 }).setExtent(m_imageExtent);
 	renderPassInfo.setRenderPass(m_renderPass)
 		.setFramebuffer(m_swapChainFramebuffers[imageIndex])
@@ -685,7 +715,7 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 		.setWidth(m_imageExtent.width)
 		.setHeight(m_imageExtent.height)
 		.setMinDepth(0.0f)
-		.setMaxDepth(0.0f);
+		.setMaxDepth(1.0f);
 	m_commandBuffer.setViewport(0, viewport);
 
 	vk::Rect2D scissor = {};

@@ -10,9 +10,10 @@
 
 int main(int argc, char** argv)
 {
-	checkLibs();
+	//checkLibs();
 
-	assert(glfwInit());
+	auto res = glfwInit();
+	assert(res);
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* win = glfwCreateWindow(1200, 800, "vulkan_try", nullptr, nullptr);
