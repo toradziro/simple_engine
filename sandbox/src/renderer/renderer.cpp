@@ -13,8 +13,6 @@
 #include <shaderc/shaderc.hpp>
 #include <cstdlib>
 
-#pragma optimize("", off)
-
 namespace
 {
 
@@ -347,13 +345,9 @@ void Renderer::createSwapchain()
 {
 	const SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 	
-	std::cout << "here" << std::endl;
 	const vk::SurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceSupportedFormats);
-	std::cout << "here2" << std::endl;
 	const vk::PresentModeKHR	presentMode = choosePresentMode(swaphainDetails.m_presentMode);
-	std::cout << "here3" << std::endl;
 	const vk::Extent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
-	std::cout << "here4" << std::endl;
 
 	vk::SwapchainCreateInfoKHR swapChainCreateInfo = {};
 	swapChainCreateInfo.imageFormat = surfaceFormat.format;
