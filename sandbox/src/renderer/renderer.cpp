@@ -343,25 +343,25 @@ void Renderer::createSurface()
 
 void Renderer::createSwapchain()
 {
-	const SwapChainDetails&	swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
+	const SwapChainDetails&		swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 	
 	const vk::SurfaceFormatKHR	surfaceFormat = chooseSurfaceFormat(swaphainDetails.m_surfaceSupportedFormats);
 	const vk::PresentModeKHR	presentMode = choosePresentMode(swaphainDetails.m_presentMode);
 	const vk::Extent2D			extent = chooseSwapChainExtent(swaphainDetails.m_surfaceCapabilities);
 
 	vk::SwapchainCreateInfoKHR swapChainCreateInfo = {};
-	swapChainCreateInfo.imageFormat = surfaceFormat.format;
-	swapChainCreateInfo.imageColorSpace = surfaceFormat.colorSpace;
-	swapChainCreateInfo.presentMode = presentMode;
-	swapChainCreateInfo.imageExtent = extent;
-	swapChainCreateInfo.minImageCount = std::clamp(swaphainDetails.m_surfaceCapabilities.minImageCount + 1
-		, swaphainDetails.m_surfaceCapabilities.minImageCount
-		, swaphainDetails.m_surfaceCapabilities.maxImageCount);
-	swapChainCreateInfo.imageArrayLayers = 1;
-	swapChainCreateInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
-	swapChainCreateInfo.preTransform = swaphainDetails.m_surfaceCapabilities.currentTransform;
-	swapChainCreateInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-	swapChainCreateInfo.clipped = VK_TRUE;
+	swapChainCreateInfo.setImageFormat(surfaceFormat.format)
+		.setImageColorSpace(surfaceFormat.colorSpace)
+		.setPresentMode(presentMode)
+		.setImageExtent(extent)
+		.setMinImageCount(std::clamp(swaphainDetails.m_surfaceCapabilities.minImageCount + 1
+			, swaphainDetails.m_surfaceCapabilities.minImageCount
+			, swaphainDetails.m_surfaceCapabilities.maxImageCount))
+		.setImageArrayLayers(1)
+		.setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+		.setPreTransform(swaphainDetails.m_surfaceCapabilities.currentTransform)
+		.setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+		.setClipped(VK_TRUE);
 
 	const QueueFamilies& families = m_physicalDeviceData.m_queueFamilies;
 
@@ -371,18 +371,18 @@ void Renderer::createSwapchain()
 			static_cast<uint32_t>(families.m_graphicQueue),
 			static_cast<uint32_t>(families.m_presentationQueue)
 		};
-		swapChainCreateInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-		swapChainCreateInfo.queueFamilyIndexCount = 2;
-		swapChainCreateInfo.pQueueFamilyIndices = indicies.data();
+		swapChainCreateInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
+			.setQueueFamilyIndexCount(2)
+			.setPQueueFamilyIndices(indicies.data());
 	}
 	else
 	{
-		swapChainCreateInfo.imageSharingMode = vk::SharingMode::eExclusive;
-		swapChainCreateInfo.queueFamilyIndexCount = 0;
-		swapChainCreateInfo.pQueueFamilyIndices = nullptr;
+		swapChainCreateInfo.setImageSharingMode(vk::SharingMode::eExclusive)
+			.setQueueFamilyIndexCount(0)
+			.setPQueueFamilyIndices(nullptr);
 	}
-	swapChainCreateInfo.oldSwapchain = VK_NULL_HANDLE;
-	swapChainCreateInfo.surface = m_surface;
+	swapChainCreateInfo.setOldSwapchain(VK_NULL_HANDLE)
+		.setSurface(m_surface);
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createSwapchainKHR(&swapChainCreateInfo
 		, nullptr
@@ -426,15 +426,15 @@ void Renderer::createShaderModule()
 	std::cout << "Sucessfully compiled shaders" << std::endl;
 
 	vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo = {};
-	vertexShaderModuleCreateInfo.codeSize = compiled_vertex_shader.size() * sizeof(uint32_t);
-	vertexShaderModuleCreateInfo.pCode = compiled_vertex_shader.data();
+	vertexShaderModuleCreateInfo.setCodeSize(compiled_vertex_shader.size() * sizeof(uint32_t))
+		.setPCode(compiled_vertex_shader.data());
 	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&vertexShaderModuleCreateInfo
 		, nullptr
 		, &m_vertexShaderModule));
 
 	vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo = {};
-	fragmentShaderModuleCreateInfo.codeSize = compiled_fragment_shader.size() * sizeof(uint32_t);
-	fragmentShaderModuleCreateInfo.pCode = compiled_fragment_shader.data();
+	fragmentShaderModuleCreateInfo.setCodeSize(compiled_fragment_shader.size() * sizeof(uint32_t))
+		.setPCode(compiled_fragment_shader.data());
 	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&fragmentShaderModuleCreateInfo
 		, nullptr
 		, &m_fragmentShaderModule));
@@ -443,45 +443,45 @@ void Renderer::createShaderModule()
 void Renderer::createPipeline()
 {
 	vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo = {};
-	vertexShaderStageCreateInfo.stage = vk::ShaderStageFlagBits::eVertex;
-	vertexShaderStageCreateInfo.module = m_vertexShaderModule;
-	vertexShaderStageCreateInfo.pName = "main";
+	vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex)
+		.setModule(m_vertexShaderModule)
+		.setPName("main");
 
 	vk::PipelineShaderStageCreateInfo fragmentShaderStageCreateInfo = {};
-	fragmentShaderStageCreateInfo.stage = vk::ShaderStageFlagBits::eFragment;
-	fragmentShaderStageCreateInfo.module = m_fragmentShaderModule;
-	fragmentShaderStageCreateInfo.pName = "main";
+	fragmentShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eFragment)
+		.setModule(m_fragmentShaderModule)
+		.setPName("main");
 
 	std::array<vk::PipelineShaderStageCreateInfo, 2> shaderStages = { vertexShaderStageCreateInfo, fragmentShaderStageCreateInfo };
 
 	//-- Create pipline now
 	//-- Vertex input
 	vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
-	vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-	vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-	vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+	vertexInputCreateInfo.setVertexBindingDescriptionCount(0)
+		.setPVertexBindingDescriptions(nullptr)
+		.setPVertexAttributeDescriptions(nullptr);
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
-	inputAssemblyCreateInfo.topology = vk::PrimitiveTopology::eTriangleList;
-	inputAssemblyCreateInfo.primitiveRestartEnable = false;
+	inputAssemblyCreateInfo.setTopology(vk::PrimitiveTopology::eTriangleList)
+		.setPrimitiveRestartEnable(false);
 
 	vk::Viewport viewport = {};
-	viewport.x = 0.0f;
-	viewport.y = 0.0f;
-	viewport.width = m_imageExtent.width;
-	viewport.height = m_imageExtent.height;
-	viewport.minDepth = 0.0f;
-	viewport.maxDepth = 1.0f;
+	viewport.setX(0.0f)
+		.setY(0.0f)
+		.setWidth(m_imageExtent.width)
+		.setHeight(m_imageExtent.height)
+		.setMinDepth(0.0f)
+		.setMaxDepth(1.0f);
 
 	vk::Rect2D scissor = {};
-	scissor.offset = vk::Offset2D(0, 0);
-	scissor.extent = m_imageExtent;
+	scissor.setOffset(vk::Offset2D(0, 0))
+		.setExtent(m_imageExtent);
 
 	vk::PipelineViewportStateCreateInfo viewportStateCreateInfo = {};
-	viewportStateCreateInfo.viewportCount = 1;
-	viewportStateCreateInfo.pViewports = &viewport;
-	viewportStateCreateInfo.scissorCount = 1;
-	viewportStateCreateInfo.pScissors = &scissor;
+	viewportStateCreateInfo.setViewportCount(1)
+		.setPViewports(&viewport)
+		.setScissorCount(1)
+		.setPScissors(&scissor);
 
 	//-- DYNAMIC STATE
 	const std::array<vk::DynamicState, 2> dynamicStateEnables = {
@@ -490,43 +490,39 @@ void Renderer::createPipeline()
 	};
 
 	vk::PipelineDynamicStateCreateInfo dynamicStateCreateInfo = {};
-	dynamicStateCreateInfo.dynamicStateCount = dynamicStateEnables.size();
-	dynamicStateCreateInfo.pDynamicStates = dynamicStateEnables.data();
+	dynamicStateCreateInfo.setDynamicStateCount(dynamicStateEnables.size())
+		.setPDynamicStates(dynamicStateEnables.data());
 
 	//-- RASTERIZER
 	vk::PipelineRasterizationStateCreateInfo rasterizerCreateInfo = {};
-	rasterizerCreateInfo.depthClampEnable = VK_FALSE;
-	rasterizerCreateInfo.rasterizerDiscardEnable = VK_FALSE;
-	rasterizerCreateInfo.polygonMode = vk::PolygonMode::eFill; //-- Try line
-	rasterizerCreateInfo.lineWidth = 1.0f;
-	rasterizerCreateInfo.cullMode = vk::CullModeFlagBits::eBack;
-	rasterizerCreateInfo.frontFace = vk::FrontFace::eClockwise;
-	rasterizerCreateInfo.depthBiasEnable = VK_FALSE;
+	rasterizerCreateInfo.setDepthClampEnable(VK_FALSE)
+		.setRasterizerDiscardEnable(VK_FALSE)
+		.setPolygonMode(vk::PolygonMode::eFill) //-- Try line
+		.setLineWidth(1.0f)
+		.setCullMode(vk::CullModeFlagBits::eBack)
+		.setFrontFace(vk::FrontFace::eClockwise)
+		.setDepthBiasEnable(VK_FALSE);
 
 	vk::PipelineMultisampleStateCreateInfo multisampling = {};
-	multisampling.sampleShadingEnable = VK_FALSE;
-	multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+	multisampling.setSampleShadingEnable(VK_FALSE)
+		.setRasterizationSamples(vk::SampleCountFlagBits::e1);
 
 	vk::PipelineColorBlendAttachmentState colorBlendAttachment = {};
-	colorBlendAttachment.colorWriteMask = vk::ColorComponentFlagBits::eR
+	colorBlendAttachment.setColorWriteMask(vk::ColorComponentFlagBits::eR
 		| vk::ColorComponentFlagBits::eG
 		| vk::ColorComponentFlagBits::eB
-		| vk::ColorComponentFlagBits::eA;
-	colorBlendAttachment.blendEnable = VK_FALSE;
+		| vk::ColorComponentFlagBits::eA)
+		.setBlendEnable(VK_FALSE);
 
 	//-- TODO: Check how to use it
 	vk::PipelineColorBlendStateCreateInfo colorBlending = {};
-	colorBlending.logicOpEnable = VK_FALSE;
-	colorBlending.logicOp = vk::LogicOp::eCopy; // Optional
-	colorBlending.attachmentCount = 1;
-	colorBlending.pAttachments = &colorBlendAttachment;
+	colorBlending.setLogicOpEnable(VK_FALSE)
+		.setLogicOp(vk::LogicOp::eCopy) // Optional
+		.setAttachmentCount(1)
+		.setPAttachments(&colorBlendAttachment);
 
 	//-- We will need layout for uniforms
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.setLayoutCount = 0;				// Optional
-	pipelineLayoutInfo.pSetLayouts = nullptr;			// Optional
-	pipelineLayoutInfo.pushConstantRangeCount = 0;		// Optional
-	pipelineLayoutInfo.pPushConstantRanges = nullptr;	// Optional
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
 		, nullptr
@@ -534,23 +530,22 @@ void Renderer::createPipeline()
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 	//-- Static part of pypline
-	pipelineInfo.stageCount				= 2;
-	pipelineInfo.pStages				= shaderStages.data();
-	pipelineInfo.pVertexInputState		= &vertexInputCreateInfo;
-	pipelineInfo.pInputAssemblyState	= &inputAssemblyCreateInfo;
-	pipelineInfo.pViewportState			= &viewportStateCreateInfo;
-	pipelineInfo.pRasterizationState	= &rasterizerCreateInfo;
-	pipelineInfo.pMultisampleState		= &multisampling;
-	pipelineInfo.pDepthStencilState		= nullptr; // Optional
-	pipelineInfo.pColorBlendState		= &colorBlending;
-	pipelineInfo.pDynamicState			= &dynamicStateCreateInfo;
+	pipelineInfo.setStageCount(2)
+		.setPStages(shaderStages.data())
+		.setPVertexInputState(&vertexInputCreateInfo)
+		.setPInputAssemblyState(&inputAssemblyCreateInfo)
+		.setPViewportState(&viewportStateCreateInfo)
+		.setPRasterizationState(&rasterizerCreateInfo)
+		.setPMultisampleState(&multisampling)
+		.setPDepthStencilState(nullptr) // Optional
+		.setPColorBlendState(&colorBlending)
+		.setPDynamicState(&dynamicStateCreateInfo)
+		//-- Layout, describing uniforms
+		.setLayout(m_pipelineLayout)
+		//-- Render pass
+		.setRenderPass(m_renderPass)
+		.setSubpass(0);
 
-	//-- Layout, describing uniforms
-	pipelineInfo.layout = m_pipelineLayout;
-
-	//-- Render pass
-	pipelineInfo.renderPass = m_renderPass;
-	pipelineInfo.subpass = 0;
 	VULKAN_CALL_CHECK(m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
 		, 1
 		, &pipelineInfo
@@ -561,23 +556,23 @@ void Renderer::createPipeline()
 void Renderer::createRenderPass()
 {
 	vk::AttachmentDescription colorAttachment = {};
-	colorAttachment.format = m_surfaceFormat.format;
-	colorAttachment.samples = vk::SampleCountFlagBits::e1;
-	colorAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-	colorAttachment.storeOp = vk::AttachmentStoreOp::eStore;
-	colorAttachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
-	colorAttachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
-	colorAttachment.initialLayout = vk::ImageLayout::eUndefined;
-	colorAttachment.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+	colorAttachment.setFormat(m_surfaceFormat.format)
+		.setSamples(vk::SampleCountFlagBits::e1)
+		.setLoadOp(vk::AttachmentLoadOp::eClear)
+		.setStoreOp(vk::AttachmentStoreOp::eStore)
+		.setStencilLoadOp(vk::AttachmentLoadOp::eDontCare)
+		.setStencilStoreOp(vk::AttachmentStoreOp::eDontCare)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 
 	vk::AttachmentReference colorAttachmentRef = {};
-	colorAttachmentRef.attachment = 0;
-	colorAttachmentRef.layout = vk::ImageLayout::eColorAttachmentOptimal;
+	colorAttachmentRef.setAttachment(0)
+		.setLayout(vk::ImageLayout::eColorAttachmentOptimal);
 
 	vk::SubpassDescription subpass = {};
-	subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments = &colorAttachmentRef;
+	subpass.setPipelineBindPoint(vk::PipelineBindPoint::eGraphics)
+		.setColorAttachmentCount(1)
+		.setPColorAttachments(&colorAttachmentRef);
 
 	vk::SubpassDependency dependency = {};
 	dependency.setSrcSubpass(VK_SUBPASS_EXTERNAL)
@@ -609,12 +604,12 @@ void Renderer::createFramebuffer()
 		std::array<vk::ImageView, 1> attachments = { imageView };
 
 		vk::FramebufferCreateInfo framebufferInfo = {};
-		framebufferInfo.renderPass		= m_renderPass;
-		framebufferInfo.attachmentCount	= 1;
-		framebufferInfo.pAttachments	= attachments.data();
-		framebufferInfo.width			= m_imageExtent.width;
-		framebufferInfo.height			= m_imageExtent.height;
-		framebufferInfo.layers			= 1;
+		framebufferInfo.setRenderPass(m_renderPass)
+			.setAttachmentCount(1)
+			.setPAttachments(attachments.data())
+			.setWidth(m_imageExtent.width)
+			.setHeight(m_imageExtent.height)
+			.setLayers(1);
 
 		VULKAN_CALL_CHECK(m_logicalDevice.createFramebuffer(&framebufferInfo
 			, nullptr
@@ -627,8 +622,8 @@ void Renderer::createFramebuffer()
 void Renderer::createCommandPool()
 {
 	vk::CommandPoolCreateInfo poolInfo = {};
-	poolInfo.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-	poolInfo.queueFamilyIndex = m_physicalDeviceData.m_queueFamilies.m_graphicQueue;
+	poolInfo.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+		.setQueueFamilyIndex(m_physicalDeviceData.m_queueFamilies.m_graphicQueue);
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createCommandPool(&poolInfo
 		, nullptr
@@ -825,15 +820,15 @@ vk::Extent2D Renderer::chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& c
 vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags)
 {
 	vk::ImageViewCreateInfo createInfo = {};
-	createInfo.image = image;
-	createInfo.viewType = vk::ImageViewType::e2D;
-	createInfo.format = format;
+	createInfo.setImage(image)
+		.setViewType(vk::ImageViewType::e2D)
+		.setFormat(format);
 
-	createInfo.subresourceRange.aspectMask = aspectFlags;
-	createInfo.subresourceRange.baseMipLevel = 0;
-	createInfo.subresourceRange.layerCount = 1;
-	createInfo.subresourceRange.levelCount = 1;
-	createInfo.subresourceRange.baseArrayLayer = 0;
+	createInfo.subresourceRange.setAspectMask(aspectFlags)
+		.setBaseMipLevel(0)
+		.setLayerCount(1)
+		.setLevelCount(1)
+		.setBaseArrayLayer(0);
 
 	vk::ImageView res = {};
 	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo, nullptr, &res));
