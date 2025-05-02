@@ -1,5 +1,8 @@
 #pragma once
 
+#define VULKAN_HPP_NO_EXCEPTIONS
+#define VULKAN_HPP_ASSERT_ON_RESULT 0
+
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -54,6 +57,7 @@ public:
 	void init(GLFWwindow* window);
 	void shutdown();
 	void update(float /*dt*/);
+	void resizedWindow() { m_framebufferResized = true; }
 
 private:
 	void	drawFrame(float /*dt*/);
@@ -61,6 +65,7 @@ private:
 	void	createVkInstance();
 	void	createLogicalDevice();
 	void	createSurface();
+	void	recreateSwapChain();
 	void	createSwapchain();
 	void	createShaderModule();
 	void	createPipeline();
@@ -86,6 +91,8 @@ private:
 	auto	chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) -> vk::Extent2D;
 
 	auto	createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) -> vk::ImageView;
+
+	void	cleanupSwapchain();
 
 private:
 	const std::vector<const char*> C_DEVICE_EXTENTIONS
@@ -122,6 +129,7 @@ private:
 
 	uint32_t						m_currFrame = 0;
 
+	bool							m_framebufferResized = false;
 #ifdef NDEBUG
 	const bool			enableValidationLayers = false;
 #else

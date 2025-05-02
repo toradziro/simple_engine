@@ -134,20 +134,12 @@ void Renderer::shutdown()
 		m_logicalDevice.destroyFence(m_inFlightFences[i]);
 	}
 	m_logicalDevice.destroyCommandPool(m_commandPool);
-	for (auto& framebuffer : m_swapChainFramebuffers)
-	{
-		m_logicalDevice.destroyFramebuffer(framebuffer);
-	}
+	cleanupSwapchain();
 	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
 	m_logicalDevice.destroyPipelineLayout(m_pipelineLayout);
 	m_logicalDevice.destroyRenderPass(m_renderPass);
 	m_logicalDevice.destroyShaderModule(m_vertexShaderModule);
 	m_logicalDevice.destroyShaderModule(m_fragmentShaderModule);
-	for (auto& [_, imageView] : m_swapchainImages)
-	{
-		m_logicalDevice.destroyImageView(imageView);
-	}
-	m_logicalDevice.destroySwapchainKHR(m_swapchain);
 	m_logicalDevice.destroy();
 	
 	m_vkInstance.destroySurfaceKHR(m_surface);
@@ -156,15 +148,38 @@ void Renderer::shutdown()
 
 void Renderer::update(float dt)
 {
-	drawFrame(dt);
+	try
+	{
+		drawFrame(dt);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error during initialization: " << e.what() << std::endl;
+	}
 }
 
 void Renderer::drawFrame(float /*dt*/)
 {
-	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame], vk::True, UINT64_MAX));
+	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame]
+		, vk::True
+		, UINT64_MAX));
+
+	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain
+		, UINT64_MAX
+		, m_imageAvailableSemaphores[m_currFrame]);
+
+	if (result == vk::Result::eErrorOutOfDateKHR)
+	{
+		recreateSwapChain();
+		return;
+	}
+	else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+	{
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
+	//-- Only reset the fence if we are submitting work
 	m_logicalDevice.resetFences(m_inFlightFences[m_currFrame]);
-	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_currFrame]);
-	VULKAN_CALL_CHECK(result);
+
 	m_commandBuffers[m_currFrame].reset();
 	recordCommandBuffer(m_commandBuffers[m_currFrame], imageIndex);
 
@@ -188,7 +203,16 @@ void Renderer::drawFrame(float /*dt*/)
 		.setSwapchains(m_swapchain)
 		.setImageIndices(imageIndex);
 
-	[[maybe_unused]]auto res = m_queues.m_presentationQueue.presentKHR(presentInfo);
+	auto resPresent = m_queues.m_presentationQueue.presentKHR(presentInfo);
+	if (resPresent == vk::Result::eErrorOutOfDateKHR || m_framebufferResized)
+	{
+		m_framebufferResized = false;
+		recreateSwapChain();
+	}
+	else if (resPresent != vk::Result::eSuccess && resPresent != vk::Result::eSuboptimalKHR)
+	{
+		throw std::runtime_error("failed to present swap chain image!");
+	}
 
 	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
 }
@@ -243,7 +267,7 @@ void Renderer::createVkInstance()
 
 void Renderer::checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
 {
-	std::vector<vk::ExtensionProperties> extentionsProps = vk::enumerateInstanceExtensionProperties();
+	auto [res, extentionsProps] = vk::enumerateInstanceExtensionProperties();
 	for (const char* extention : instanceExtentionsAppNeed)
 	{
 		auto itRes = std::ranges::find_if(extentionsProps, [&](const vk::ExtensionProperties& vkInst)
@@ -260,7 +284,7 @@ void Renderer::checkExtentionsSupport(const std::vector<const char*>& instanceEx
 
 void Renderer::checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
 {
-	std::vector<vk::LayerProperties> availableLayers = vk::enumerateInstanceLayerProperties();
+	auto [res, availableLayers] = vk::enumerateInstanceLayerProperties();
 
 	for (const char* layer : validationLayerAppNeed)
 	{
@@ -318,7 +342,7 @@ void Renderer::createLogicalDevice()
 
 bool Renderer::checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExts, vk::PhysicalDevice physicalDevice) const
 {
-	std::vector<vk::ExtensionProperties> extentionsProps = physicalDevice.enumerateDeviceExtensionProperties();
+	auto [res, extentionsProps] = physicalDevice.enumerateDeviceExtensionProperties();
 
 	for (const char* extention : deviceExts)
 	{
@@ -346,7 +370,19 @@ void Renderer::createSurface()
 	m_surface = vk::SurfaceKHR(rawSurface);
 }
 
+void Renderer::recreateSwapChain()
+{
+	m_logicalDevice.waitIdle();
 
+	cleanupSwapchain();
+
+	m_swapchainImages.clear();
+	m_swapChainFramebuffers.clear();
+	m_physicalDeviceData.m_swapchainDetails = swapchainDetails(m_physicalDevice);
+
+	createSwapchain();
+	createFramebuffer();
+}
 
 void Renderer::createSwapchain()
 {
@@ -395,7 +431,7 @@ void Renderer::createSwapchain()
 		, nullptr
 		, &m_swapchain));
 
-	std::vector<vk::Image> images = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
+	auto [res, images] = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
 	for (auto& image : images)
 	{
 		m_swapchainImages.push_back({
@@ -644,7 +680,8 @@ void Renderer::createCommandBuffer()
 		.setCommandPool(m_commandPool)
 		.setLevel(vk::CommandBufferLevel::ePrimary);
 
-	m_commandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+	auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+	m_commandBuffers = commandBuffers;
 }
 
 void Renderer::createSyncObjects()
@@ -658,16 +695,27 @@ void Renderer::createSyncObjects()
 
 	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		m_imageAvailableSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
-		m_renderFinishedSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
-		m_inFlightFences.push_back(m_logicalDevice.createFence(fenceInfo));
+		{
+			auto [res, imageAvailableSemaphore] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+			m_imageAvailableSemaphores.push_back(std::move(imageAvailableSemaphore));
+		}
+
+		{
+			auto [res, renderFinishedSemaphore] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+			m_renderFinishedSemaphores.push_back(std::move(renderFinishedSemaphore));
+		}
+
+		{
+			auto [res, fence] = m_logicalDevice.createFence(fenceInfo);
+			m_inFlightFences.push_back(std::move(fence));
+		}
 	}
 
 }
 
 void Renderer::setupPhysicalDevice()
 {
-	std::vector<vk::PhysicalDevice> physDevices = m_vkInstance.enumeratePhysicalDevices();
+	auto[res, physDevices] = m_vkInstance.enumeratePhysicalDevices();
 
 	int bestScore = 0;
 	for (vk::PhysicalDevice& device : physDevices)
@@ -773,8 +821,15 @@ SwapChainDetails Renderer::swapchainDetails(vk::PhysicalDevice device) const
 	SwapChainDetails details;
 	VULKAN_CALL_CHECK(device.getSurfaceCapabilitiesKHR(m_surface, &details.m_surfaceCapabilities));
 
-	details.m_surfaceSupportedFormats = device.getSurfaceFormatsKHR(m_surface);
-	details.m_presentMode = device.getSurfacePresentModesKHR(m_surface);
+	{
+		auto [res, surfaceSupportedFormats] = device.getSurfaceFormatsKHR(m_surface);
+		details.m_surfaceSupportedFormats = std::move(surfaceSupportedFormats);
+	}
+
+	{
+		auto [res, surfacePresentModes] = device.getSurfacePresentModesKHR(m_surface);
+		details.m_presentMode = std::move(surfacePresentModes);
+	}
 
 	return details;
 }
@@ -848,6 +903,19 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 	vk::ImageView res = {};
 	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo, nullptr, &res));
 	return res;
+}
+
+void Renderer::cleanupSwapchain()
+{
+	for (auto& framebuffer : m_swapChainFramebuffers)
+	{
+		m_logicalDevice.destroyFramebuffer(framebuffer);
+	}
+	for (auto& [_, imageView] : m_swapchainImages)
+	{
+		m_logicalDevice.destroyImageView(imageView);
+	}
+	m_logicalDevice.destroySwapchainKHR(m_swapchain);
 }
 
 PhysicalDeviceData Renderer::checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const

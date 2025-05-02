@@ -17,24 +17,38 @@ int main(int argc, char** argv)
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* win = glfwCreateWindow(1200, 800, "vulkan_try", nullptr, nullptr);
-	bool shouldClouseWindow = false;
-	glfwSetWindowUserPointer(win, &shouldClouseWindow);
+	struct WinData
+	{
+		bool m_shouldClouseWindow = false;
+		bool m_resizedWindow = false;
+	};
+	WinData data = {};
+	glfwSetWindowUserPointer(win, &data);
 
 	glfwSetWindowCloseCallback(win, [](GLFWwindow* win)
 		{
-			bool* shouldClose = (bool*)glfwGetWindowUserPointer(win);
-			assert(shouldClose != nullptr);
-			*shouldClose = true;
+			WinData* data = (WinData*)glfwGetWindowUserPointer(win);
+			data->m_shouldClouseWindow = true;
+		});
+
+	glfwSetFramebufferSizeCallback(win, [](GLFWwindow* window, int width, int height)
+		{
+			WinData* data = (WinData*)glfwGetWindowUserPointer(window);
+			data->m_resizedWindow = true;
 		});
 
 	Renderer renderer;
 	renderer.init(win);
 
-	while (!shouldClouseWindow)
+	while (!data.m_shouldClouseWindow)
 	{
 		glfwPollEvents();
+		if (data.m_resizedWindow)
+		{
+			renderer.resizedWindow();
+			data.m_resizedWindow = false;
+		}
 		renderer.update(0.0f);
-		glfwSwapBuffers(win);
 	}
 
 	glfwDestroyWindow(win);
