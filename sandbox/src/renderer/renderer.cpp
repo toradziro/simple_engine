@@ -16,6 +16,8 @@
 namespace
 {
 
+constexpr int	C_MAX_FRAMES_IN_FLIGHT = 2;
+
 #ifdef NDEBUG
 #define VULKAN_CALL_CHECK(x) \
 do { \
@@ -125,9 +127,12 @@ void Renderer::shutdown()
 	m_queues.m_graphicQueue.waitIdle();
 	m_queues.m_presentationQueue.waitIdle();
 
-	m_logicalDevice.destroySemaphore(m_imageAvailableSemaphore);
-	m_logicalDevice.destroySemaphore(m_renderFinishedSemaphore);
-	m_logicalDevice.destroyFence(m_inFlightFence);
+	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		m_logicalDevice.destroySemaphore(m_imageAvailableSemaphores[i]);
+		m_logicalDevice.destroySemaphore(m_renderFinishedSemaphores[i]);
+		m_logicalDevice.destroyFence(m_inFlightFences[i]);
+	}
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	for (auto& framebuffer : m_swapChainFramebuffers)
 	{
@@ -156,34 +161,36 @@ void Renderer::update(float dt)
 
 void Renderer::drawFrame(float /*dt*/)
 {
-	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFence, vk::True, UINT64_MAX));
-	m_logicalDevice.resetFences(m_inFlightFence);
-	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain, UINT64_MAX, m_imageAvailableSemaphore);
+	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame], vk::True, UINT64_MAX));
+	m_logicalDevice.resetFences(m_inFlightFences[m_currFrame]);
+	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[m_currFrame]);
 	VULKAN_CALL_CHECK(result);
-	m_commandBuffer.reset();
-	recordCommandBuffer(m_commandBuffer, imageIndex);
+	m_commandBuffers[m_currFrame].reset();
+	recordCommandBuffer(m_commandBuffers[m_currFrame], imageIndex);
 
 	//-- Submitting command buffer
 	vk::SubmitInfo submitInfo = {};
 	vk::PipelineStageFlags waitStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 	submitInfo.setWaitSemaphoreCount(1)
-		.setWaitSemaphores(m_imageAvailableSemaphore)
+		.setWaitSemaphores(m_imageAvailableSemaphores[m_currFrame])
 		.setWaitDstStageMask(waitStages)
 		.setSignalSemaphoreCount(1)
-		.setSignalSemaphores(m_renderFinishedSemaphore)
+		.setSignalSemaphores(m_renderFinishedSemaphores[m_currFrame])
 		.setCommandBufferCount(1)
-		.setCommandBuffers(m_commandBuffer);
+		.setCommandBuffers(m_commandBuffers[m_currFrame]);
 
-	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFence);
+	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
 
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(1)
-		.setWaitSemaphores(m_renderFinishedSemaphore)
+		.setWaitSemaphores(m_renderFinishedSemaphores[m_currFrame])
 		.setSwapchainCount(1)
 		.setSwapchains(m_swapchain)
 		.setImageIndices(imageIndex);
 
 	[[maybe_unused]]auto res = m_queues.m_presentationQueue.presentKHR(presentInfo);
+
+	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
 }
 
 void Renderer::createVkInstance()
@@ -633,21 +640,29 @@ void Renderer::createCommandPool()
 void Renderer::createCommandBuffer()
 {
 	vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
-	commandBufferAllocateInfo.setCommandBufferCount(1)
+	commandBufferAllocateInfo.setCommandBufferCount(C_MAX_FRAMES_IN_FLIGHT)
 		.setCommandPool(m_commandPool)
 		.setLevel(vk::CommandBufferLevel::ePrimary);
 
-	auto allocatedCommandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
-	m_commandBuffer = *allocatedCommandBuffers.begin();
+	m_commandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
 }
 
 void Renderer::createSyncObjects()
 {
-	m_imageAvailableSemaphore = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
-	m_renderFinishedSemaphore = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+	m_imageAvailableSemaphores.reserve(C_MAX_FRAMES_IN_FLIGHT);
+	m_renderFinishedSemaphores.reserve(C_MAX_FRAMES_IN_FLIGHT);
+	m_inFlightFences.reserve(C_MAX_FRAMES_IN_FLIGHT);
+
 	vk::FenceCreateInfo fenceInfo = {};
 	fenceInfo.setFlags(vk::FenceCreateFlagBits::eSignaled);
-	m_inFlightFence = m_logicalDevice.createFence(fenceInfo);
+
+	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		m_imageAvailableSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
+		m_renderFinishedSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
+		m_inFlightFences.push_back(m_logicalDevice.createFence(fenceInfo));
+	}
+
 }
 
 void Renderer::setupPhysicalDevice()
@@ -682,10 +697,10 @@ void Renderer::setupPhysicalDevice()
 	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
 }
 
-void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t imageIndex)
 {
 	vk::CommandBufferBeginInfo cmdBBeginfo = {};
-	VULKAN_CALL_CHECK(m_commandBuffer.begin(&cmdBBeginfo));
+	VULKAN_CALL_CHECK(commandBuffer.begin(&cmdBBeginfo));
 
 	vk::RenderPassBeginInfo renderPassInfo = {};
 	vk::Rect2D renderArea = {};
@@ -697,22 +712,22 @@ void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t image
 		.setClearValueCount(1)
 		.setClearValues({ clearValue });
 
-	m_commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-	m_commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
+	commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
 	vk::Viewport viewport = {};
 	viewport.setX(0.0f).setY(0.0f)
 		.setWidth(m_imageExtent.width)
 		.setHeight(m_imageExtent.height)
 		.setMinDepth(0.0f)
 		.setMaxDepth(1.0f);
-	m_commandBuffer.setViewport(0, viewport);
+	commandBuffer.setViewport(0, viewport);
 
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
-	m_commandBuffer.setScissor(0, scissor);
-	m_commandBuffer.draw(3, 1, 0, 0);
-	m_commandBuffer.endRenderPass();
-	m_commandBuffer.end();
+	commandBuffer.setScissor(0, scissor);
+	commandBuffer.draw(3, 1, 0, 0);
+	commandBuffer.endRenderPass();
+	commandBuffer.end();
 }
 
 QueueFamilies Renderer::checkQueueFamilies(vk::PhysicalDevice device) const

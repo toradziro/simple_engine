@@ -71,7 +71,7 @@ private:
 	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
 
-	void	recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+	void	recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t imageIndex);
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
@@ -109,16 +109,18 @@ private:
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
 	vk::CommandPool					m_commandPool;
-	vk::CommandBuffer				m_commandBuffer;
+	std::vector<vk::CommandBuffer>	m_commandBuffers;
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
 
 	vk::SurfaceFormatKHR			m_surfaceFormat;
 	vk::Extent2D					m_imageExtent;
 	vk::PresentModeKHR				m_presentMode;
 
-	vk::Semaphore					m_imageAvailableSemaphore;
-	vk::Semaphore					m_renderFinishedSemaphore;
-	vk::Fence						m_inFlightFence;
+	std::vector<vk::Semaphore>		m_imageAvailableSemaphores;
+	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
+	std::vector<vk::Fence>			m_inFlightFences;
+
+	uint32_t						m_currFrame = 0;
 
 #ifdef NDEBUG
 	const bool			enableValidationLayers = false;
