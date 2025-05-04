@@ -5,6 +5,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 #include <vector>
 #include <array>
 
@@ -18,6 +19,12 @@ struct QueueFamilies
 		return m_graphicQueue >= 0
 			&& m_presentationQueue >= 0;
 	}
+};
+
+struct VertexData
+{
+	glm::vec2	m_vertex;
+	glm::vec3	m_color;
 };
 
 struct Queues
@@ -126,6 +133,12 @@ private:
 	std::vector<vk::Semaphore>		m_imageAvailableSemaphores;
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
+
+	const std::vector<VertexData>	m_vertices = {
+		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+	};
 
 	uint32_t						m_currFrame = 0;
 

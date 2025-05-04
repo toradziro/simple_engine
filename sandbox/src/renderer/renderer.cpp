@@ -74,6 +74,31 @@ std::string readFile(const std::string& path)
 	return buffer;
 }
 
+vk::VertexInputBindingDescription getBindingDescription()
+{
+	vk::VertexInputBindingDescription bindingDescription = {};
+	bindingDescription.setBinding(0)
+		.setStride(sizeof(VertexData))
+		.setInputRate(vk::VertexInputRate::eVertex);
+	return bindingDescription;
+}
+
+std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions()
+{
+	std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions = {};
+	attributeDescriptions[0].setBinding(0)
+		.setFormat(vk::Format::eR32G32Sfloat)
+		.setLocation(0)
+		.setOffset(offsetof(VertexData, m_vertex));
+
+	attributeDescriptions[1].setBinding(0)
+		.setFormat(vk::Format::eR32G32B32Sfloat)
+		.setLocation(1)
+		.setOffset(offsetof(VertexData, m_color));
+
+	return attributeDescriptions;
+}
+
 }
 
 Renderer::~Renderer()
@@ -499,10 +524,12 @@ void Renderer::createPipeline()
 
 	//-- Create pipline now
 	//-- Vertex input
+	auto bindingDescriptions = getBindingDescription();
+	auto atributeDescriptions = getAttributeDescriptions();
 	vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
 	vertexInputCreateInfo.setVertexBindingDescriptionCount(0)
-		.setPVertexBindingDescriptions(nullptr)
-		.setPVertexAttributeDescriptions(nullptr);
+		.setVertexBindingDescriptions(bindingDescriptions)
+		.setVertexAttributeDescriptions(atributeDescriptions);
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
 	inputAssemblyCreateInfo.setTopology(vk::PrimitiveTopology::eTriangleList)
