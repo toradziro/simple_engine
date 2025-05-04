@@ -69,6 +69,8 @@ public:
 private:
 	void	drawFrame(float /*dt*/);
 
+	uint32_t	findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+
 	void	createVkInstance();
 	void	createLogicalDevice();
 	void	createSurface();
@@ -79,6 +81,7 @@ private:
 	void	createRenderPass();
 	void	createFramebuffer();
 	void	createCommandPool();
+	void	createVertexBuffer();
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
@@ -122,6 +125,8 @@ private:
 	vk::RenderPass					m_renderPass;
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
+	vk::Buffer						m_vertexBuffer;
+	vk::DeviceMemory				m_vertexBufferMem;
 	vk::CommandPool					m_commandPool;
 	std::vector<vk::CommandBuffer>	m_commandBuffers;
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;

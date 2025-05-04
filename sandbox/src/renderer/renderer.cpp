@@ -134,6 +134,8 @@ void Renderer::init(GLFWwindow* window)
 		createFramebuffer();
 		std::cout << "createCommandPool" << std::endl;
 		createCommandPool();
+		std::cout << "createVertexBuffer" << std::endl;
+		createVertexBuffer();
 		std::cout << "createCommandBuffer" << std::endl;
 		createCommandBuffer();
 		std::cout << "createSyncObjects" << std::endl;
@@ -160,6 +162,8 @@ void Renderer::shutdown()
 	}
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
+	m_logicalDevice.destroyBuffer(m_vertexBuffer);
+	m_logicalDevice.freeMemory(m_vertexBufferMem);
 	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
 	m_logicalDevice.destroyPipelineLayout(m_pipelineLayout);
 	m_logicalDevice.destroyRenderPass(m_renderPass);
@@ -240,6 +244,20 @@ void Renderer::drawFrame(float /*dt*/)
 	}
 
 	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
+}
+
+uint32_t Renderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+{
+	vk::PhysicalDeviceMemoryProperties physDeviceMemProps = m_physicalDevice.getMemoryProperties();
+	for (uint32_t i = 0; i < physDeviceMemProps.memoryTypeCount; ++i)
+	{
+		if ((typeFilter & (i << 1)) &&
+			(physDeviceMemProps.memoryTypes[i].propertyFlags & properties) == properties)
+		{
+			return i;
+		}
+	}
+	assert(false, "failed to find memory");
 }
 
 void Renderer::createVkInstance()
@@ -700,6 +718,45 @@ void Renderer::createCommandPool()
 		, &m_commandPool));
 }
 
+void Renderer::createVertexBuffer()
+{
+	vk::BufferCreateInfo bufferInfo = {};
+	bufferInfo.setSize(m_vertices.size() * sizeof(VertexData))
+		.setUsage(vk::BufferUsageFlagBits::eVertexBuffer)
+		.setSharingMode(vk::SharingMode::eExclusive);
+	{
+		auto [res, buffer] = m_logicalDevice.createBuffer(bufferInfo);
+		m_vertexBuffer = buffer;
+	}
+
+	vk::MemoryRequirements memReq = m_logicalDevice.getBufferMemoryRequirements(m_vertexBuffer);
+	uint32_t memType = findMemoryType(memReq.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
+	
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.setMemoryTypeIndex(memType)
+		.setAllocationSize(memReq.size);
+
+	{
+		auto [res, vbm] = m_logicalDevice.allocateMemory(allocInfo);
+		VULKAN_CALL_CHECK(res);
+		m_vertexBufferMem = vbm;
+		m_logicalDevice.bindBufferMemory(m_vertexBuffer, m_vertexBufferMem, 0);
+	}
+
+	void* data = nullptr;
+	m_logicalDevice.mapMemory(m_vertexBufferMem, 0, bufferInfo.size, {}, &data);
+	memcpy(data, m_vertices.data(), m_vertices.size() * sizeof(VertexData));
+
+	//-- Use if memory not coherent
+	//vk::MappedMemoryRange mappedMemory = {};
+	//mappedMemory.setMemory(m_vertexBufferMem)
+	//	.setOffset(0)
+	//	.setSize(bufferInfo.size);
+	//m_logicalDevice.flushMappedMemoryRanges(mappedMemory);
+
+	m_logicalDevice.unmapMemory(m_vertexBufferMem);
+}
+
 void Renderer::createCommandBuffer()
 {
 	vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
@@ -789,6 +846,9 @@ void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t ima
 
 	commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
+
+	commandBuffer.bindVertexBuffers(0, { m_vertexBuffer }, { 0 });
+
 	vk::Viewport viewport = {};
 	viewport.setX(0.0f).setY(0.0f)
 		.setWidth(m_imageExtent.width)
@@ -800,9 +860,9 @@ void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t ima
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
 	commandBuffer.setScissor(0, scissor);
-	commandBuffer.draw(3, 1, 0, 0);
+	commandBuffer.draw(m_vertices.size(), 1, 0, 0);
 	commandBuffer.endRenderPass();
-	commandBuffer.end();
+	auto res = commandBuffer.end();
 }
 
 QueueFamilies Renderer::checkQueueFamilies(vk::PhysicalDevice device) const
