@@ -82,6 +82,7 @@ private:
 	void	createFramebuffer();
 	void	createCommandPool();
 	void	createVertexBuffer();
+	void	createIndexBuffer();
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
@@ -134,6 +135,8 @@ private:
 	vk::Pipeline					m_graphicsPipeline;
 	vk::Buffer						m_vertexBuffer;
 	vk::DeviceMemory				m_vertexBufferMem;
+	vk::Buffer						m_indexBuffer;
+	vk::DeviceMemory				m_indexBufferMem;
 	vk::CommandPool					m_commandPool;
 	std::vector<vk::CommandBuffer>	m_commandBuffers;
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
@@ -147,10 +150,13 @@ private:
 	std::vector<vk::Fence>			m_inFlightFences;
 
 	const std::vector<VertexData>	m_vertices = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+		{{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}
 	};
+
+	const std::vector<uint16_t>		m_indicies = { 0, 1, 2, 2, 3, 0 };
 
 	uint32_t						m_currFrame = 0;
 

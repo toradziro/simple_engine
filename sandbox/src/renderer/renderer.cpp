@@ -136,6 +136,8 @@ void Renderer::init(GLFWwindow* window)
 		createCommandPool();
 		std::cout << "createVertexBuffer" << std::endl;
 		createVertexBuffer();
+		std::cout << "createIndexBuffer" << std::endl;
+		createIndexBuffer();
 		std::cout << "createCommandBuffer" << std::endl;
 		createCommandBuffer();
 		std::cout << "createSyncObjects" << std::endl;
@@ -163,6 +165,8 @@ void Renderer::shutdown()
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
+	m_logicalDevice.destroyBuffer(m_indexBuffer);
+	m_logicalDevice.freeMemory(m_indexBufferMem);
 	m_logicalDevice.destroyBuffer(m_vertexBuffer);
 	m_logicalDevice.freeMemory(m_vertexBufferMem);
 	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
@@ -750,6 +754,36 @@ void Renderer::createVertexBuffer()
 	m_logicalDevice.freeMemory(stagingBufferMemory);
 }
 
+void Renderer::createIndexBuffer()
+{
+	auto bufferSize = m_indicies.size() * sizeof(uint16_t);
+
+	vk::Buffer stagingBuffer;
+	vk::DeviceMemory stagingBufferMemory;
+
+	createBuffer(bufferSize,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		stagingBuffer,
+		stagingBufferMemory);
+
+	void* data = nullptr;
+	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, bufferSize, {}, &data);
+	memcpy(data, m_indicies.data(), bufferSize);
+
+	m_logicalDevice.unmapMemory(stagingBufferMemory);
+
+	createBuffer(bufferSize,
+		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		m_indexBuffer,
+		m_indexBufferMem);
+
+	copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
+	m_logicalDevice.destroyBuffer(stagingBuffer);
+	m_logicalDevice.freeMemory(stagingBufferMemory);
+}
+
 //-- Use if memory not coherent
 //vk::MappedMemoryRange mappedMemory = {};
 //mappedMemory.setMemory(m_vertexBufferMem)
@@ -848,6 +882,7 @@ void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t ima
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
 
 	commandBuffer.bindVertexBuffers(0, { m_vertexBuffer }, { 0 });
+	commandBuffer.bindIndexBuffer(m_indexBuffer, 0, vk::IndexType::eUint16);
 
 	vk::Viewport viewport = {};
 	viewport.setX(0.0f).setY(0.0f)
@@ -860,7 +895,7 @@ void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t ima
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
 	commandBuffer.setScissor(0, scissor);
-	commandBuffer.draw(m_vertices.size(), 1, 0, 0);
+	commandBuffer.drawIndexed(m_indicies.size(), 1, 0, 0, 0);
 	commandBuffer.endRenderPass();
 	auto res = commandBuffer.end();
 }
