@@ -1,7 +1,7 @@
 #pragma once
 
 #define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_ASSERT_ON_RESULT 0
+#define VULKAN_HPP_ASSERT_ON_RESULT
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
@@ -101,6 +101,13 @@ private:
 	auto	chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) -> vk::Extent2D;
 
 	auto	createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) -> vk::ImageView;
+
+	void	createBuffer(vk::DeviceSize size
+		, vk::BufferUsageFlags usageFlags
+		, vk::MemoryPropertyFlags memPropFlags
+		, vk::Buffer& buffer
+		, vk::DeviceMemory& deviceMemory);
+	void	copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size);
 
 	void	cleanupSwapchain();
 

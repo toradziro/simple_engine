@@ -151,8 +151,8 @@ void Renderer::init(GLFWwindow* window)
 
 void Renderer::shutdown()
 {
-	m_queues.m_graphicQueue.waitIdle();
-	m_queues.m_presentationQueue.waitIdle();
+	auto waitIdleGraphicQueueRes = m_queues.m_graphicQueue.waitIdle();
+	auto waitIdlePresentationQueueRes = m_queues.m_presentationQueue.waitIdle();
 
 	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -160,6 +160,7 @@ void Renderer::shutdown()
 		m_logicalDevice.destroySemaphore(m_renderFinishedSemaphores[i]);
 		m_logicalDevice.destroyFence(m_inFlightFences[i]);
 	}
+	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
 	m_logicalDevice.destroyBuffer(m_vertexBuffer);
@@ -223,7 +224,7 @@ void Renderer::drawFrame(float /*dt*/)
 		.setCommandBufferCount(1)
 		.setCommandBuffers(m_commandBuffers[m_currFrame]);
 
-	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
+	auto submitRes = m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
 
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(1)
@@ -257,7 +258,8 @@ uint32_t Renderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags p
 			return i;
 		}
 	}
-	assert(false, "failed to find memory");
+	assert(false);
+	return 0;
 }
 
 void Renderer::createVkInstance()
@@ -415,7 +417,7 @@ void Renderer::createSurface()
 
 void Renderer::recreateSwapChain()
 {
-	m_logicalDevice.waitIdle();
+	auto waitIdleRes = m_logicalDevice.waitIdle();
 
 	cleanupSwapchain();
 
@@ -720,42 +722,40 @@ void Renderer::createCommandPool()
 
 void Renderer::createVertexBuffer()
 {
-	vk::BufferCreateInfo bufferInfo = {};
-	bufferInfo.setSize(m_vertices.size() * sizeof(VertexData))
-		.setUsage(vk::BufferUsageFlagBits::eVertexBuffer)
-		.setSharingMode(vk::SharingMode::eExclusive);
-	{
-		auto [res, buffer] = m_logicalDevice.createBuffer(bufferInfo);
-		m_vertexBuffer = buffer;
-	}
+	auto bufferSize = m_vertices.size() * sizeof(VertexData);
 
-	vk::MemoryRequirements memReq = m_logicalDevice.getBufferMemoryRequirements(m_vertexBuffer);
-	uint32_t memType = findMemoryType(memReq.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent);
-	
-	vk::MemoryAllocateInfo allocInfo = {};
-	allocInfo.setMemoryTypeIndex(memType)
-		.setAllocationSize(memReq.size);
+	vk::Buffer stagingBuffer;
+	vk::DeviceMemory stagingBufferMemory;
 
-	{
-		auto [res, vbm] = m_logicalDevice.allocateMemory(allocInfo);
-		VULKAN_CALL_CHECK(res);
-		m_vertexBufferMem = vbm;
-		m_logicalDevice.bindBufferMemory(m_vertexBuffer, m_vertexBufferMem, 0);
-	}
+	createBuffer(bufferSize,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		stagingBuffer,
+		stagingBufferMemory);
 
 	void* data = nullptr;
-	m_logicalDevice.mapMemory(m_vertexBufferMem, 0, bufferInfo.size, {}, &data);
-	memcpy(data, m_vertices.data(), m_vertices.size() * sizeof(VertexData));
+	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, bufferSize, {}, &data);
+	memcpy(data, m_vertices.data(), bufferSize);
 
-	//-- Use if memory not coherent
-	//vk::MappedMemoryRange mappedMemory = {};
-	//mappedMemory.setMemory(m_vertexBufferMem)
-	//	.setOffset(0)
-	//	.setSize(bufferInfo.size);
-	//m_logicalDevice.flushMappedMemoryRanges(mappedMemory);
+	m_logicalDevice.unmapMemory(stagingBufferMemory);
 
-	m_logicalDevice.unmapMemory(m_vertexBufferMem);
+	createBuffer(bufferSize,
+		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+		vk::MemoryPropertyFlagBits::eDeviceLocal,
+		m_vertexBuffer,
+		m_vertexBufferMem);
+
+	copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+	m_logicalDevice.destroyBuffer(stagingBuffer);
+	m_logicalDevice.freeMemory(stagingBufferMemory);
 }
+
+//-- Use if memory not coherent
+//vk::MappedMemoryRange mappedMemory = {};
+//mappedMemory.setMemory(m_vertexBufferMem)
+//	.setOffset(0)
+//	.setSize(bufferInfo.size);
+//m_logicalDevice.flushMappedMemoryRanges(mappedMemory);
 
 void Renderer::createCommandBuffer()
 {
@@ -990,6 +990,70 @@ vk::ImageView Renderer::createImageView(vk::Image image, vk::Format format, vk::
 	vk::ImageView res = {};
 	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo, nullptr, &res));
 	return res;
+}
+
+void Renderer::createBuffer(vk::DeviceSize size
+	, vk::BufferUsageFlags usageFlags
+	, vk::MemoryPropertyFlags memPropFlags
+	, vk::Buffer& buffer
+	, vk::DeviceMemory& deviceMemory)
+{
+	vk::BufferCreateInfo bufferInfo = {};
+	bufferInfo.setSize(size)
+		.setUsage(usageFlags)
+		.setSharingMode(vk::SharingMode::eExclusive);
+
+	{
+		auto [res, createdBuffer] = m_logicalDevice.createBuffer(bufferInfo);
+		buffer = createdBuffer;
+	}
+
+	vk::MemoryRequirements memReq = m_logicalDevice.getBufferMemoryRequirements(buffer);
+	uint32_t memType = findMemoryType(memReq.memoryTypeBits, memPropFlags);
+
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.setMemoryTypeIndex(memType)
+		.setAllocationSize(memReq.size);
+
+	{
+		auto [res, allocatedMemory] = m_logicalDevice.allocateMemory(allocInfo);
+		VULKAN_CALL_CHECK(res);
+		deviceMemory = allocatedMemory;
+		auto bindBufferRes = m_logicalDevice.bindBufferMemory(buffer, deviceMemory, 0);
+	}
+}
+
+void Renderer::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
+{
+	vk::CommandBufferAllocateInfo commandBuffersAllocateInfo = {};
+	commandBuffersAllocateInfo.setCommandBufferCount(1)
+		.setCommandPool(m_commandPool)
+		.setLevel(vk::CommandBufferLevel::ePrimary);
+
+	auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(commandBuffersAllocateInfo);
+	vk::CommandBuffer commandBuffer = *commandBuffers.begin();
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	auto beginRes = commandBuffer.begin(&beginInfo);
+
+	vk::BufferCopy bufferCopy = {};
+	bufferCopy.setSize(size)
+		.setSrcOffset(0)
+		.setDstOffset(0);
+
+	commandBuffer.copyBuffer(srcBuffer, dstBuffer, { bufferCopy });
+	auto endRes = commandBuffer.end();
+
+	vk::SubmitInfo submitInfo = {};
+	submitInfo.setCommandBufferCount(1)
+		.setCommandBuffers({ commandBuffer });
+
+	auto submitRes = m_queues.m_graphicQueue.submit({submitInfo});
+	auto waitIdleRes = m_queues.m_graphicQueue.waitIdle();
+
+	m_logicalDevice.freeCommandBuffers(m_commandPool, commandBuffer);
 }
 
 void Renderer::cleanupSwapchain()
