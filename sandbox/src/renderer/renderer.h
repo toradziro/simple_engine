@@ -56,6 +56,13 @@ struct PhysicalDeviceData
 	SwapChainDetails	m_swapchainDetails;
 };
 
+struct UniformBufferObject
+{
+	glm::mat4	m_model;
+	glm::mat4	m_view;
+	glm::mat4	m_proj;
+};
+
 class Renderer
 {
 public:
@@ -77,6 +84,7 @@ private:
 	void	recreateSwapChain();
 	void	createSwapchain();
 	void	createShaderModule();
+	void	createDescriptorSetLayout();
 	void	createPipeline();
 	void	createRenderPass();
 	void	createFramebuffer();
@@ -122,6 +130,7 @@ private:
 	PhysicalDeviceData				m_physicalDeviceData;
 	std::vector<SwapchainImage>		m_swapchainImages;
 	Queues							m_queues;
+	UniformBufferObject				m_modelViewProj;
 	GLFWwindow*						m_window = nullptr;
 	vk::Instance					m_vkInstance;
 	vk::PhysicalDevice				m_physicalDevice;
@@ -131,6 +140,7 @@ private:
 	vk::ShaderModule				m_vertexShaderModule;
 	vk::ShaderModule				m_fragmentShaderModule;
 	vk::RenderPass					m_renderPass;
+	vk::DescriptorSetLayout			m_descriptorSetLayout;
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
 	vk::Buffer						m_vertexBuffer;

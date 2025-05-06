@@ -128,6 +128,8 @@ void Renderer::init(GLFWwindow* window)
 		createShaderModule();
 		std::cout << "createRenderPass" << std::endl;
 		createRenderPass();
+		std::cout << "createDescriptorSetLayout" << std::endl;
+		createDescriptorSetLayout();
 		std::cout << "createPipeline" << std::endl;
 		createPipeline();
 		std::cout << "createFramebuffer" << std::endl;
@@ -162,6 +164,7 @@ void Renderer::shutdown()
 		m_logicalDevice.destroySemaphore(m_renderFinishedSemaphores[i]);
 		m_logicalDevice.destroyFence(m_inFlightFences[i]);
 	}
+	m_logicalDevice.destroyDescriptorSetLayout(m_descriptorSetLayout);
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
@@ -532,6 +535,22 @@ void Renderer::createShaderModule()
 		, &m_fragmentShaderModule));
 }
 
+void Renderer::createDescriptorSetLayout()
+{
+	vk::DescriptorSetLayoutBinding layoutBinding = {};
+	layoutBinding.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+		.setDescriptorCount(1)
+		.setBinding(0)
+		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+
+	vk::DescriptorSetLayoutCreateInfo createInfo = {};
+	createInfo.setBindingCount(1)
+		.setBindings({ layoutBinding });
+
+	auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
+	m_descriptorSetLayout = layout;
+}
+
 void Renderer::createPipeline()
 {
 	vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo = {};
@@ -617,6 +636,8 @@ void Renderer::createPipeline()
 
 	//-- We will need layout for uniforms
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
+	pipelineLayoutInfo.setSetLayouts(m_descriptorSetLayout)
+		.setSetLayoutCount(1);
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
 		, nullptr
