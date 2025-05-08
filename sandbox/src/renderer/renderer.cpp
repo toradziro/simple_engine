@@ -13,6 +13,11 @@
 #include <shaderc/shaderc.hpp>
 #include <cstdlib>
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace
 {
 
@@ -140,6 +145,8 @@ void Renderer::init(GLFWwindow* window)
 		createVertexBuffer();
 		std::cout << "createIndexBuffer" << std::endl;
 		createIndexBuffer();
+		std::cout << "createUniformBuffers" << std::endl;
+		createUniformBuffers();
 		std::cout << "createCommandBuffer" << std::endl;
 		createCommandBuffer();
 		std::cout << "createSyncObjects" << std::endl;
@@ -163,6 +170,14 @@ void Renderer::shutdown()
 		m_logicalDevice.destroySemaphore(m_imageAvailableSemaphores[i]);
 		m_logicalDevice.destroySemaphore(m_renderFinishedSemaphores[i]);
 		m_logicalDevice.destroyFence(m_inFlightFences[i]);
+	}
+	for (auto& buf : m_unifoirmBuffers)
+	{
+		m_logicalDevice.destroyBuffer(buf);
+	}
+	for (auto& mem : m_unifoirmBuffersMemory)
+	{
+		m_logicalDevice.freeMemory(mem);
 	}
 	m_logicalDevice.destroyDescriptorSetLayout(m_descriptorSetLayout);
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
@@ -220,6 +235,8 @@ void Renderer::drawFrame(float /*dt*/)
 	m_commandBuffers[m_currFrame].reset();
 	recordCommandBuffer(m_commandBuffers[m_currFrame], imageIndex);
 
+	updateUniformBuffer();
+
 	//-- Submitting command buffer
 	vk::SubmitInfo submitInfo = {};
 	vk::PipelineStageFlags waitStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
@@ -252,6 +269,26 @@ void Renderer::drawFrame(float /*dt*/)
 	}
 
 	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
+}
+
+void Renderer::updateUniformBuffer()
+{
+	int w = 0, h = 0;
+	glfwGetFramebufferSize(m_window, &w, &h);
+
+	m_modelViewProj.m_model = glm::mat4(1.0f);
+
+	m_modelViewProj.m_model = glm::translate(m_modelViewProj.m_model, glm::vec3(1.0f, 1.0f, 1.0f));
+	//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_modelViewProj.m_model = glm::scale(m_modelViewProj.m_model, glm::vec3(1.0f, 1.0f, 1.0f));
+
+	m_modelViewProj.m_proj = glm::ortho(0.0f
+		, static_cast<float>(w)
+		, static_cast<float>(h)
+		, 0.0f, -1.0f, 1.0f);
+
+	m_modelViewProj.m_view = glm::translate(glm::mat4(1.0f), glm::vec3(/*-cameraPos.x*/0.0f, /*-cameraPos.y*/0.0f, 0.0f));
+	memcpy(m_uniformBuffersMapped[m_currFrame], &m_modelViewProj, sizeof(m_modelViewProj));
 }
 
 uint32_t Renderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
@@ -805,12 +842,29 @@ void Renderer::createIndexBuffer()
 	m_logicalDevice.freeMemory(stagingBufferMemory);
 }
 
-//-- Use if memory not coherent
-//vk::MappedMemoryRange mappedMemory = {};
-//mappedMemory.setMemory(m_vertexBufferMem)
-//	.setOffset(0)
-//	.setSize(bufferInfo.size);
-//m_logicalDevice.flushMappedMemoryRanges(mappedMemory);
+void Renderer::createUniformBuffers()
+{
+	auto bufferSize = sizeof(UniformBufferObject);
+
+	m_unifoirmBuffers.resize(bufferSize);
+	m_unifoirmBuffersMemory.resize(bufferSize);
+	m_uniformBuffersMapped.resize(bufferSize);
+
+	for (uint32_t i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		createBuffer(bufferSize,
+			vk::BufferUsageFlagBits::eUniformBuffer,
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+			m_unifoirmBuffers[i],
+			m_unifoirmBuffersMemory[i]);
+
+		auto res = m_logicalDevice.mapMemory(m_unifoirmBuffersMemory[i],
+			0,
+			bufferSize,
+			{},
+			&m_uniformBuffersMapped[i]);
+	}
+}
 
 void Renderer::createCommandBuffer()
 {

@@ -5,9 +5,13 @@
 
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
+
 #include <vector>
 #include <array>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
 
 struct QueueFamilies
 {
@@ -75,6 +79,7 @@ public:
 
 private:
 	void	drawFrame(float /*dt*/);
+	void	updateUniformBuffer();
 
 	uint32_t	findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
 
@@ -91,6 +96,7 @@ private:
 	void	createCommandPool();
 	void	createVertexBuffer();
 	void	createIndexBuffer();
+	void	createUniformBuffers();
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
@@ -143,10 +149,15 @@ private:
 	vk::DescriptorSetLayout			m_descriptorSetLayout;
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
+
 	vk::Buffer						m_vertexBuffer;
 	vk::DeviceMemory				m_vertexBufferMem;
 	vk::Buffer						m_indexBuffer;
 	vk::DeviceMemory				m_indexBufferMem;
+	std::vector<vk::Buffer>			m_unifoirmBuffers;
+	std::vector<vk::DeviceMemory>	m_unifoirmBuffersMemory;
+	std::vector<void*>				m_uniformBuffersMapped;
+
 	vk::CommandPool					m_commandPool;
 	std::vector<vk::CommandBuffer>	m_commandBuffers;
 	std::vector<vk::Framebuffer>	m_swapChainFramebuffers;
