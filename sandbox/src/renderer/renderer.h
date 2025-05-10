@@ -97,6 +97,8 @@ private:
 	void	createVertexBuffer();
 	void	createIndexBuffer();
 	void	createUniformBuffers();
+	void	createDescriptorPool();
+	void	createDescriptorsSets();
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice(); 
@@ -105,11 +107,11 @@ private:
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
-	bool	checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExts, vk::PhysicalDevice physicalDevice) const;
+	[[nodiscard]] bool	checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const;
 	
-	auto	checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const -> PhysicalDeviceData;
-	auto	checkQueueFamilies(vk::PhysicalDevice device) const -> QueueFamilies;
-	auto	swapchainDetails(vk::PhysicalDevice device) const -> SwapChainDetails;
+	[[nodiscard]] auto	checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const -> PhysicalDeviceData;
+	[[nodiscard]] auto	checkQueueFamilies(vk::PhysicalDevice device) const -> QueueFamilies;
+	[[nodiscard]] auto	swapchainDetails(vk::PhysicalDevice device) const -> SwapChainDetails;
 
 	auto	chooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& supportedFormats) -> vk::SurfaceFormatKHR;
 	auto	choosePresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) -> vk::PresentModeKHR;
@@ -136,7 +138,7 @@ private:
 	PhysicalDeviceData				m_physicalDeviceData;
 	std::vector<SwapchainImage>		m_swapchainImages;
 	Queues							m_queues;
-	UniformBufferObject				m_modelViewProj;
+	UniformBufferObject				m_modelViewProj = {};
 	GLFWwindow*						m_window = nullptr;
 	vk::Instance					m_vkInstance;
 	vk::PhysicalDevice				m_physicalDevice;
@@ -147,6 +149,8 @@ private:
 	vk::ShaderModule				m_fragmentShaderModule;
 	vk::RenderPass					m_renderPass;
 	vk::DescriptorSetLayout			m_descriptorSetLayout;
+	vk::DescriptorPool				m_descriptorPool;
+	std::vector<vk::DescriptorSet>	m_descriptorSets;
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
 
@@ -154,8 +158,8 @@ private:
 	vk::DeviceMemory				m_vertexBufferMem;
 	vk::Buffer						m_indexBuffer;
 	vk::DeviceMemory				m_indexBufferMem;
-	std::vector<vk::Buffer>			m_unifoirmBuffers;
-	std::vector<vk::DeviceMemory>	m_unifoirmBuffersMemory;
+	std::vector<vk::Buffer>			m_uniformBuffers;
+	std::vector<vk::DeviceMemory>	m_uniformBuffersMemory;
 	std::vector<void*>				m_uniformBuffersMapped;
 
 	vk::CommandPool					m_commandPool;
@@ -164,7 +168,7 @@ private:
 
 	vk::SurfaceFormatKHR			m_surfaceFormat;
 	vk::Extent2D					m_imageExtent;
-	vk::PresentModeKHR				m_presentMode;
+	vk::PresentModeKHR				m_presentMode = {};
 
 	std::vector<vk::Semaphore>		m_imageAvailableSemaphores;
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;

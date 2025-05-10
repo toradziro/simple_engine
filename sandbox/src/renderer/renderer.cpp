@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-#include <assert.h>
+#include <cassert>
 #include <ranges>
 #include <set>
 #include <string>
@@ -147,6 +147,10 @@ void Renderer::init(GLFWwindow* window)
 		createIndexBuffer();
 		std::cout << "createUniformBuffers" << std::endl;
 		createUniformBuffers();
+		std::cout << "createDescriptorPool" << std::endl;
+		createDescriptorPool();
+		std::cout << "createDescriptorSets" << std::endl;
+		createDescriptorsSets();
 		std::cout << "createCommandBuffer" << std::endl;
 		createCommandBuffer();
 		std::cout << "createSyncObjects" << std::endl;
@@ -171,14 +175,15 @@ void Renderer::shutdown()
 		m_logicalDevice.destroySemaphore(m_renderFinishedSemaphores[i]);
 		m_logicalDevice.destroyFence(m_inFlightFences[i]);
 	}
-	for (auto& buf : m_unifoirmBuffers)
+	for (const auto& buf : m_uniformBuffers)
 	{
 		m_logicalDevice.destroyBuffer(buf);
 	}
-	for (auto& mem : m_unifoirmBuffersMemory)
+	for (const auto& mem : m_uniformBuffersMemory)
 	{
 		m_logicalDevice.freeMemory(mem);
 	}
+	m_logicalDevice.destroyDescriptorPool(m_descriptorPool);
 	m_logicalDevice.destroyDescriptorSetLayout(m_descriptorSetLayout);
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
@@ -276,19 +281,15 @@ void Renderer::updateUniformBuffer()
 	int w = 0, h = 0;
 	glfwGetFramebufferSize(m_window, &w, &h);
 
-	m_modelViewProj.m_model = glm::mat4(1.0f);
+	UniformBufferObject ubo = {};
+	ubo.m_model = glm::mat4(1.0f);
+	ubo.m_view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f)
+		, glm::vec3(0.0f, 0.0f, 0.0f)
+		, glm::vec3(0.0f, 1.0f, 0.0f));
 
-	m_modelViewProj.m_model = glm::translate(m_modelViewProj.m_model, glm::vec3(1.0f, 1.0f, 1.0f));
-	//model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	m_modelViewProj.m_model = glm::scale(m_modelViewProj.m_model, glm::vec3(1.0f, 1.0f, 1.0f));
-
-	m_modelViewProj.m_proj = glm::ortho(0.0f
-		, static_cast<float>(w)
-		, static_cast<float>(h)
-		, 0.0f, -1.0f, 1.0f);
-
-	m_modelViewProj.m_view = glm::translate(glm::mat4(1.0f), glm::vec3(/*-cameraPos.x*/0.0f, /*-cameraPos.y*/0.0f, 0.0f));
-	memcpy(m_uniformBuffersMapped[m_currFrame], &m_modelViewProj, sizeof(m_modelViewProj));
+	ubo.m_proj = glm::perspective(glm::radians(45.0f), (float)w / (float)h, 0.1f, 10.0f);
+	ubo.m_proj[1][1] *= -1;
+	memcpy(m_uniformBuffersMapped[m_currFrame], &ubo, sizeof(UniformBufferObject));
 }
 
 uint32_t Renderer::findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
@@ -429,11 +430,11 @@ void Renderer::createLogicalDevice()
 		, &m_queues.m_presentationQueue);
 }
 
-bool Renderer::checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExts, vk::PhysicalDevice physicalDevice) const
+bool Renderer::checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
 {
 	auto [res, extentionsProps] = physicalDevice.enumerateDeviceExtensionProperties();
 
-	for (const char* extention : deviceExts)
+	for (const char* extention : deviceExtentions)
 	{
 		auto itRes = std::ranges::find_if(extentionsProps, [&](const vk::ExtensionProperties& vkInst)
 			{
@@ -607,8 +608,7 @@ void Renderer::createPipeline()
 	auto bindingDescriptions = getBindingDescription();
 	auto atributeDescriptions = getAttributeDescriptions();
 	vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
-	vertexInputCreateInfo.setVertexBindingDescriptionCount(0)
-		.setVertexBindingDescriptions(bindingDescriptions)
+	vertexInputCreateInfo.setVertexBindingDescriptions(bindingDescriptions)
 		.setVertexAttributeDescriptions(atributeDescriptions);
 
 	vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
@@ -650,7 +650,7 @@ void Renderer::createPipeline()
 		.setPolygonMode(vk::PolygonMode::eFill) //-- Try line
 		.setLineWidth(1.0f)
 		.setCullMode(vk::CullModeFlagBits::eBack)
-		.setFrontFace(vk::FrontFace::eClockwise)
+		.setFrontFace(vk::FrontFace::eCounterClockwise)
 		.setDepthBiasEnable(VK_FALSE);
 
 	vk::PipelineMultisampleStateCreateInfo multisampling = {};
@@ -846,23 +846,65 @@ void Renderer::createUniformBuffers()
 {
 	auto bufferSize = sizeof(UniformBufferObject);
 
-	m_unifoirmBuffers.resize(bufferSize);
-	m_unifoirmBuffersMemory.resize(bufferSize);
-	m_uniformBuffersMapped.resize(bufferSize);
+	m_uniformBuffers.resize(C_MAX_FRAMES_IN_FLIGHT);
+	m_uniformBuffersMemory.resize(C_MAX_FRAMES_IN_FLIGHT);
+	m_uniformBuffersMapped.resize(C_MAX_FRAMES_IN_FLIGHT);
 
 	for (uint32_t i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
 		createBuffer(bufferSize,
 			vk::BufferUsageFlagBits::eUniformBuffer,
 			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-			m_unifoirmBuffers[i],
-			m_unifoirmBuffersMemory[i]);
+			m_uniformBuffers[i],
+			m_uniformBuffersMemory[i]);
 
-		auto res = m_logicalDevice.mapMemory(m_unifoirmBuffersMemory[i],
+		auto res = m_logicalDevice.mapMemory(m_uniformBuffersMemory[i],
 			0,
 			bufferSize,
 			{},
 			&m_uniformBuffersMapped[i]);
+	}
+}
+
+void Renderer::createDescriptorPool()
+{
+	vk::DescriptorPoolSize poolSize = {};
+	poolSize.setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
+		.setType(vk::DescriptorType::eUniformBuffer);
+
+	vk::DescriptorPoolCreateInfo createInfo = {};
+	createInfo.setPoolSizeCount(1)
+		.setPoolSizes({ poolSize })
+		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT);
+
+	auto [res, pool] = m_logicalDevice.createDescriptorPool(createInfo);
+	m_descriptorPool = pool;
+}
+
+void Renderer::createDescriptorsSets()
+{
+	std::vector<vk::DescriptorSetLayout> layouts(C_MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout);
+	vk::DescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.setDescriptorPool(m_descriptorPool)
+		.setSetLayouts(layouts);
+
+	auto res = m_logicalDevice.allocateDescriptorSets(allocInfo);
+	m_descriptorSets = res.value;
+	for (uint32_t i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
+	{
+		vk::DescriptorBufferInfo bufferInfo = {};
+		bufferInfo.setBuffer(m_uniformBuffers[i])
+			.setOffset(0)
+			.setRange(sizeof(UniformBufferObject));
+
+		vk::WriteDescriptorSet descriptorWrite = {};
+		descriptorWrite.setBufferInfo(bufferInfo)
+			.setDstSet(m_descriptorSets[i])
+			.setDstBinding(0)
+			.setDstArrayElement(0)
+			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(1);
+		m_logicalDevice.updateDescriptorSets({ descriptorWrite }, {});
 	}
 }
 
@@ -970,6 +1012,10 @@ void Renderer::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t ima
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
 	commandBuffer.setScissor(0, scissor);
+	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+		m_pipelineLayout,
+		0,
+		m_descriptorSets[m_currFrame], {});
 	commandBuffer.drawIndexed(m_indicies.size(), 1, 0, 0, 0);
 	commandBuffer.endRenderPass();
 	auto res = commandBuffer.end();
