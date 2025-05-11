@@ -18,6 +18,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 namespace
 {
 
@@ -141,6 +144,8 @@ void Renderer::init(GLFWwindow* window)
 		createFramebuffer();
 		std::cout << "createCommandPool" << std::endl;
 		createCommandPool();
+		std::cout << "createTextureImage" << std::endl;
+		createTextureImage();
 		std::cout << "createVertexBuffer" << std::endl;
 		createVertexBuffer();
 		std::cout << "createIndexBuffer" << std::endl;
@@ -192,6 +197,10 @@ void Renderer::shutdown()
 	m_logicalDevice.freeMemory(m_indexBufferMem);
 	m_logicalDevice.destroyBuffer(m_vertexBuffer);
 	m_logicalDevice.freeMemory(m_vertexBufferMem);
+
+	m_logicalDevice.destroyImage(m_textureImage);
+	m_logicalDevice.freeMemory(m_textureImageMemory);
+
 	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
 	m_logicalDevice.destroyPipelineLayout(m_pipelineLayout);
 	m_logicalDevice.destroyRenderPass(m_renderPass);
@@ -782,6 +791,75 @@ void Renderer::createCommandPool()
 		, &m_commandPool));
 }
 
+void Renderer::createTextureImage()
+{
+	constexpr auto C_IMAGE_PATH = "images/nyan_cat.png";
+
+	auto curr_path = std::filesystem::current_path();
+	auto root_path = curr_path.parent_path();
+
+	auto full_cat_path = root_path / C_IMAGE_PATH;
+
+	int texture_width = 0;
+	int texture_height = 0;
+	int tex_channels = 0;
+
+	stbi_uc* pixels = stbi_load(full_cat_path.string().c_str()
+		, &texture_width
+		, &texture_height
+		, &tex_channels
+		, STBI_rgb_alpha);
+
+	if (!pixels)
+	{
+		assert(false);
+	}
+
+	//-- 4 bytes per pixel
+	vk::DeviceSize imageSize = texture_width * texture_height * 4;
+
+	vk::Buffer stagingBuffer;
+	vk::DeviceMemory stagingBufferMemory;
+
+	createBuffer(imageSize,
+		vk::BufferUsageFlagBits::eTransferSrc,
+		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+		stagingBuffer,
+		stagingBufferMemory);
+
+	void* data = nullptr;
+	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
+	memcpy(data, pixels, imageSize);
+
+	m_logicalDevice.unmapMemory(stagingBufferMemory);
+	stbi_image_free(pixels);
+
+	createImage(texture_width
+		, texture_height
+		, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
+		, vk::MemoryPropertyFlagBits::eDeviceLocal
+		, m_textureImage
+		, m_textureImageMemory);
+
+	transitionImage(m_textureImage,
+		vk::Format::eR8G8B8A8Srgb,
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::eTransferDstOptimal);
+
+	copyBufferToImage(stagingBuffer,
+		m_textureImage,
+		texture_width,
+		texture_height);
+
+	transitionImage(m_textureImage,
+		vk::Format::eR8G8B8A8Srgb,
+		vk::ImageLayout::eTransferDstOptimal,
+		vk::ImageLayout::eShaderReadOnlyOptimal);
+
+	m_logicalDevice.destroyBuffer(stagingBuffer);
+	m_logicalDevice.freeMemory(stagingBufferMemory);
+}
+
 void Renderer::createVertexBuffer()
 {
 	auto bufferSize = m_vertices.size() * sizeof(VertexData);
@@ -1179,20 +1257,119 @@ void Renderer::createBuffer(vk::DeviceSize size
 	}
 }
 
+void Renderer::createImage(uint32_t width
+	, uint32_t height
+	, vk::ImageUsageFlags usage
+	, vk::MemoryPropertyFlags memPropFlags
+	, vk::Image& image
+	, vk::DeviceMemory& imageMemory)
+{
+	vk::ImageCreateInfo createInfo = {};
+	createInfo.setImageType(vk::ImageType::e2D)
+		.setExtent({ width, height, 1 })
+		.setMipLevels(1)
+		.setArrayLayers(1)
+		.setFormat(vk::Format::eR8G8B8A8Srgb)
+		.setTiling(vk::ImageTiling::eOptimal)
+		.setInitialLayout(vk::ImageLayout::eUndefined)
+		.setUsage(usage)
+		.setSharingMode(vk::SharingMode::eExclusive)
+		.setSamples(vk::SampleCountFlagBits::e1);
+
+	auto [result, createdImage] = m_logicalDevice.createImage(createInfo);
+	image = createdImage;
+
+	vk::MemoryRequirements memReq = {};
+	memReq = m_logicalDevice.getImageMemoryRequirements(image);
+
+	uint32_t memType = findMemoryType(memReq.memoryTypeBits, memPropFlags);
+
+	vk::MemoryAllocateInfo allocInfo = {};
+	allocInfo.setMemoryTypeIndex(memType)
+		.setAllocationSize(memReq.size);
+
+	{
+		auto [res, allocatedMemory] = m_logicalDevice.allocateMemory(allocInfo);
+		VULKAN_CALL_CHECK(res);
+		imageMemory = allocatedMemory;
+		auto bindImageRes = m_logicalDevice.bindImageMemory(image, imageMemory, 0);
+		VULKAN_CALL_CHECK(bindImageRes);
+	}
+}
+
+void Renderer::transitionImage(vk::Image image
+	, vk::Format format
+	, vk::ImageLayout oldLayout
+	, vk::ImageLayout newLayout)
+{
+	auto commandBuffer = beginSingleTimeCommands();
+
+	vk::AccessFlags srcAccess = {};
+	vk::AccessFlags dstAccess = {};
+	vk::PipelineStageFlags srcStage = {};
+	vk::PipelineStageFlags dstStage = {};
+
+	if (oldLayout == vk::ImageLayout::eUndefined && newLayout == vk::ImageLayout::eTransferDstOptimal)
+	{
+		srcAccess = vk::AccessFlagBits::eNone;
+		dstAccess = vk::AccessFlagBits::eTransferWrite;
+		srcStage = vk::PipelineStageFlagBits::eTopOfPipe;
+		dstStage = vk::PipelineStageFlagBits::eTransfer;
+	}
+	else
+	{
+		srcAccess = vk::AccessFlagBits::eTransferWrite;
+		dstAccess = vk::AccessFlagBits::eShaderRead;
+		srcStage = vk::PipelineStageFlagBits::eTransfer;
+		dstStage = vk::PipelineStageFlagBits::eFragmentShader;
+	}
+
+	vk::ImageMemoryBarrier barrier = {};
+	barrier.setOldLayout(oldLayout)
+		.setNewLayout(newLayout)
+		.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+		.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+		.setImage(image)
+		.setSubresourceRange({ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 })
+		.setSrcAccessMask(srcAccess)
+		.setDstAccessMask(dstAccess);
+
+	commandBuffer.pipelineBarrier(srcStage
+		, dstStage
+		, vk::DependencyFlagBits::eByRegion
+		, {}
+		, {}
+		, barrier);
+
+	endSingleTimeCommand(commandBuffer);
+}
+
+void Renderer::copyBufferToImage(vk::Buffer buffer
+	, vk::Image image
+	, uint32_t width
+	, uint32_t height)
+{
+	auto commandBuffer = beginSingleTimeCommands();
+
+	vk::BufferImageCopy region = {};
+	region.setBufferOffset(0)
+		.setBufferRowLength(0)
+		.setBufferImageHeight(0)
+		.setImageSubresource({ vk::ImageAspectFlagBits::eColor, 0, 0, 1 })
+		.setImageOffset({ 0, 0, 0 })
+		.setImageExtent({ width, height, 1 });
+
+	commandBuffer.copyBufferToImage(buffer
+		, image
+		, vk::ImageLayout::eTransferDstOptimal
+		, { region });
+
+	endSingleTimeCommand(commandBuffer);
+}
+
 void Renderer::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
 {
-	vk::CommandBufferAllocateInfo commandBuffersAllocateInfo = {};
-	commandBuffersAllocateInfo.setCommandBufferCount(1)
-		.setCommandPool(m_commandPool)
-		.setLevel(vk::CommandBufferLevel::ePrimary);
-
-	auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(commandBuffersAllocateInfo);
-	vk::CommandBuffer commandBuffer = *commandBuffers.begin();
-
-	vk::CommandBufferBeginInfo beginInfo = {};
-	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-
-	auto beginRes = commandBuffer.begin(&beginInfo);
+	auto commandBuffer = beginSingleTimeCommands();
 
 	vk::BufferCopy bufferCopy = {};
 	bufferCopy.setSize(size)
@@ -1200,16 +1377,40 @@ void Renderer::copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::Device
 		.setDstOffset(0);
 
 	commandBuffer.copyBuffer(srcBuffer, dstBuffer, { bufferCopy });
-	auto endRes = commandBuffer.end();
+
+	endSingleTimeCommand(commandBuffer);
+}
+
+vk::CommandBuffer Renderer::beginSingleTimeCommands()
+{
+	vk::CommandBufferAllocateInfo allocateInfo = {};
+	allocateInfo.setLevel(vk::CommandBufferLevel::ePrimary)
+		.setCommandPool(m_commandPool)
+		.setCommandBufferCount(1);
+
+	vk::CommandBuffer commandBuffer = {};
+	auto [allocRes, commandBuffers] = m_logicalDevice.allocateCommandBuffers(allocateInfo);
+	commandBuffer = *commandBuffers.begin();
+
+	vk::CommandBufferBeginInfo beginInfo = {};
+	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	auto cmdBeginRes = commandBuffer.begin(beginInfo);
+	return commandBuffer;
+}
+
+void Renderer::endSingleTimeCommand(vk::CommandBuffer commandBuffer)
+{
+	auto res = commandBuffer.end();
 
 	vk::SubmitInfo submitInfo = {};
 	submitInfo.setCommandBufferCount(1)
 		.setCommandBuffers({ commandBuffer });
 
-	auto submitRes = m_queues.m_graphicQueue.submit({submitInfo});
-	auto waitIdleRes = m_queues.m_graphicQueue.waitIdle();
+	res = m_queues.m_graphicQueue.submit(submitInfo);
+	res = m_queues.m_graphicQueue.waitIdle();
 
-	m_logicalDevice.freeCommandBuffers(m_commandPool, commandBuffer);
+	m_logicalDevice.freeCommandBuffers(m_commandPool, { commandBuffer });
 }
 
 void Renderer::cleanupSwapchain()

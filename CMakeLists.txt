@@ -35,6 +35,7 @@ set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW/include")
 set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/glm")
 set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
 set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc/libshaderc/include")
+set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/stb")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
@@ -78,6 +79,7 @@ target_include_directories(sandbox PRIVATE
     ${GLM_INCLUDE_DIR}
     ${VULKAN_INCLUDE_DIR}
     ${SHADERC_INCLUDE_DIR}
+	${STB_INCLUDE_DIR}
 )
 
 # Vulkan path
