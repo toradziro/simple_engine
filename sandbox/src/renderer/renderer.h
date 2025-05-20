@@ -29,6 +29,7 @@ struct VertexData
 {
 	glm::vec2	m_vertex;
 	glm::vec3	m_color;
+	glm::vec2	m_texCoord;
 };
 
 struct Queues
@@ -203,10 +204,10 @@ private:
 	std::vector<vk::Fence>			m_inFlightFences;
 
 	const std::vector<VertexData>	m_vertices = {
-		{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}}
+		{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+		{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+		{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+		{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
 	};
 
 	const std::vector<uint16_t>		m_indicies = { 0, 1, 2, 2, 3, 0 };

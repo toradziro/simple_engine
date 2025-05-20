@@ -91,9 +91,9 @@ vk::VertexInputBindingDescription getBindingDescription()
 	return bindingDescription;
 }
 
-std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions()
+std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions()
 {
-	std::array<vk::VertexInputAttributeDescription, 2> attributeDescriptions = {};
+	std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions = {};
 	attributeDescriptions[0].setBinding(0)
 		.setFormat(vk::Format::eR32G32Sfloat)
 		.setLocation(0)
@@ -103,6 +103,11 @@ std::array<vk::VertexInputAttributeDescription, 2> getAttributeDescriptions()
 		.setFormat(vk::Format::eR32G32B32Sfloat)
 		.setLocation(1)
 		.setOffset(offsetof(VertexData, m_color));
+
+	attributeDescriptions[2].setBinding(0)
+		.setFormat(vk::Format::eR32G32Sfloat)
+		.setLocation(2)
+		.setOffset(offsetof(VertexData, m_texCoord));
 
 	return attributeDescriptions;
 }
@@ -597,9 +602,20 @@ void Renderer::createDescriptorSetLayout()
 		.setBinding(0)
 		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
 
+	vk::DescriptorSetLayoutBinding samplerLayoutBinding = {};
+	samplerLayoutBinding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setDescriptorCount(1)
+		.setBinding(1)
+		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+
+	std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings = {
+		layoutBinding
+		, samplerLayoutBinding
+	};
+
 	vk::DescriptorSetLayoutCreateInfo createInfo = {};
 	createInfo.setBindingCount(1)
-		.setBindings({ layoutBinding });
+		.setBindings(layoutBindings);
 
 	auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
 	m_descriptorSetLayout = layout;
@@ -678,7 +694,13 @@ void Renderer::createPipeline()
 		| vk::ColorComponentFlagBits::eG
 		| vk::ColorComponentFlagBits::eB
 		| vk::ColorComponentFlagBits::eA)
-		.setBlendEnable(VK_FALSE);
+		.setBlendEnable(VK_TRUE)
+		.setSrcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
+		.setDstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
+		.setColorBlendOp(vk::BlendOp::eAdd)
+		.setSrcAlphaBlendFactor(vk::BlendFactor::eOne) 
+		.setDstAlphaBlendFactor(vk::BlendFactor::eZero)
+		.setAlphaBlendOp(vk::BlendOp::eAdd);
 
 	//-- TODO: Check how to use it
 	vk::PipelineColorBlendStateCreateInfo colorBlending = {};
@@ -811,6 +833,7 @@ void Renderer::createTextureImage()
 	int texture_height = 0;
 	int tex_channels = 0;
 
+	stbi_set_flip_vertically_on_load(true);
 	stbi_uc* pixels = stbi_load(full_cat_path.string().c_str()
 		, &texture_width
 		, &texture_height
@@ -867,23 +890,11 @@ void Renderer::createTextureImage()
 	m_logicalDevice.freeMemory(stagingBufferMemory);
 }
 
-//-- TODO: create common texture view creation function
 void Renderer::createTextureImageView()
 {
-	vk::ImageViewCreateInfo createInfo = {};
-	createInfo.setImage(m_textureImage)
-		.setViewType(vk::ImageViewType::e2D)
-		.setFormat(vk::Format::eR8G8B8A8Srgb);
-
-	createInfo.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
-		.setBaseMipLevel(0)
-		.setLayerCount(1)
-		.setLevelCount(1)
-		.setBaseArrayLayer(0);
-
-	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo
-		, nullptr
-		, &m_textureImageView));
+	m_textureImageView = createImageView(m_textureImage
+		, vk::Format::eR8G8B8A8Srgb
+		, vk::ImageAspectFlagBits::eColor);
 }
 
 void Renderer::createTextureSampler()
@@ -997,13 +1008,15 @@ void Renderer::createUniformBuffers()
 
 void Renderer::createDescriptorPool()
 {
-	vk::DescriptorPoolSize poolSize = {};
-	poolSize.setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
+	std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
+	poolSizes[0].setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
 		.setType(vk::DescriptorType::eUniformBuffer);
+	poolSizes[1].setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
+		.setType(vk::DescriptorType::eCombinedImageSampler);
 
 	vk::DescriptorPoolCreateInfo createInfo = {};
 	createInfo.setPoolSizeCount(1)
-		.setPoolSizes({ poolSize })
+		.setPoolSizes(poolSizes)
 		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT);
 
 	auto [res, pool] = m_logicalDevice.createDescriptorPool(createInfo);
@@ -1026,14 +1039,26 @@ void Renderer::createDescriptorsSets()
 			.setOffset(0)
 			.setRange(sizeof(UniformBufferObject));
 
-		vk::WriteDescriptorSet descriptorWrite = {};
-		descriptorWrite.setBufferInfo(bufferInfo)
+		vk::DescriptorImageInfo imageInfo = {};
+		imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+			.setImageView(m_textureImageView)
+			.setSampler(m_textureSampler);
+
+		std::array<vk::WriteDescriptorSet, 2> descriptorsWrite = {};
+		descriptorsWrite[0].setBufferInfo(bufferInfo)
 			.setDstSet(m_descriptorSets[i])
 			.setDstBinding(0)
 			.setDstArrayElement(0)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1);
-		m_logicalDevice.updateDescriptorSets({ descriptorWrite }, {});
+		descriptorsWrite[1].setImageInfo(imageInfo)
+			.setDstSet(m_descriptorSets[i])
+			.setDstBinding(1)
+			.setDstArrayElement(0)
+			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1);
+
+		m_logicalDevice.updateDescriptorSets(descriptorsWrite, {});
 	}
 }
 
