@@ -95,6 +95,8 @@ private:
 	void	createFramebuffer();
 	void	createCommandPool();
 	void	createTextureImage();
+	void	createTextureImageView();
+	void	createTextureSampler();
 	void	createVertexBuffer();
 	void	createIndexBuffer();
 	void	createUniformBuffers();
@@ -185,6 +187,8 @@ private:
 	std::vector<void*>				m_uniformBuffersMapped;
 	vk::Image						m_textureImage;
 	vk::DeviceMemory				m_textureImageMemory;
+	vk::ImageView					m_textureImageView;
+	vk::Sampler						m_textureSampler;
 
 	vk::CommandPool					m_commandPool;
 	std::vector<vk::CommandBuffer>	m_commandBuffers;

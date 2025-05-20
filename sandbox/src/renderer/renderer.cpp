@@ -146,6 +146,10 @@ void Renderer::init(GLFWwindow* window)
 		createCommandPool();
 		std::cout << "createTextureImage" << std::endl;
 		createTextureImage();
+		std::cout << "createTextureImageView" << std::endl;
+		createTextureImageView();
+		std::cout << "createTextureSampler" << std::endl;
+		createTextureSampler();
 		std::cout << "createVertexBuffer" << std::endl;
 		createVertexBuffer();
 		std::cout << "createIndexBuffer" << std::endl;
@@ -198,6 +202,8 @@ void Renderer::shutdown()
 	m_logicalDevice.destroyBuffer(m_vertexBuffer);
 	m_logicalDevice.freeMemory(m_vertexBufferMem);
 
+	m_logicalDevice.destroySampler(m_textureSampler);
+	m_logicalDevice.destroyImageView(m_textureImageView);
 	m_logicalDevice.destroyImage(m_textureImage);
 	m_logicalDevice.freeMemory(m_textureImageMemory);
 
@@ -418,6 +424,7 @@ void Renderer::createLogicalDevice()
 	}
 	//-- Device info itself
 	vk::PhysicalDeviceFeatures deviceFeatures = {};
+	deviceFeatures.setSamplerAnisotropy(VK_TRUE);
 	vk::DeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.setQueueCreateInfos(queuesCreateInfos)
 		.setPEnabledFeatures(&deviceFeatures)
@@ -858,6 +865,50 @@ void Renderer::createTextureImage()
 
 	m_logicalDevice.destroyBuffer(stagingBuffer);
 	m_logicalDevice.freeMemory(stagingBufferMemory);
+}
+
+//-- TODO: create common texture view creation function
+void Renderer::createTextureImageView()
+{
+	vk::ImageViewCreateInfo createInfo = {};
+	createInfo.setImage(m_textureImage)
+		.setViewType(vk::ImageViewType::e2D)
+		.setFormat(vk::Format::eR8G8B8A8Srgb);
+
+	createInfo.subresourceRange.setAspectMask(vk::ImageAspectFlagBits::eColor)
+		.setBaseMipLevel(0)
+		.setLayerCount(1)
+		.setLevelCount(1)
+		.setBaseArrayLayer(0);
+
+	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo
+		, nullptr
+		, &m_textureImageView));
+}
+
+void Renderer::createTextureSampler()
+{
+	const auto props = m_physicalDevice.getProperties();
+	const auto maxAnisotropy = props.limits.maxSamplerAnisotropy;
+	vk::SamplerCreateInfo createInfo = {};
+	createInfo.setMagFilter(vk::Filter::eNearest)
+		.setMinFilter(vk::Filter::eNearest)
+		.setAddressModeU(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeV(vk::SamplerAddressMode::eRepeat)
+		.setAddressModeW(vk::SamplerAddressMode::eRepeat)
+		.setAnisotropyEnable(VK_TRUE)
+		.setMaxAnisotropy(maxAnisotropy)
+		.setBorderColor(vk::BorderColor::eIntOpaqueBlack)
+		.setUnnormalizedCoordinates(VK_FALSE)
+		.setCompareEnable(VK_FALSE)
+		.setCompareOp(vk::CompareOp::eAlways)
+		.setMipmapMode(vk::SamplerMipmapMode::eNearest)
+		.setMipLodBias(0.0f)
+		.setMinLod(0.0f)
+		.setMaxLod(0.0f);
+
+	auto [res, sampler] = m_logicalDevice.createSampler(createInfo);
+	m_textureSampler = sampler;
 }
 
 void Renderer::createVertexBuffer()
