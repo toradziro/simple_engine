@@ -37,8 +37,7 @@ int main(int argc, char** argv)
 			data->m_resizedWindow = true;
 		});
 
-	Renderer renderer;
-	renderer.init(win);
+	Renderer renderer(win);
 
 	while (!data.m_shouldClouseWindow)
 	{
@@ -48,7 +47,9 @@ int main(int argc, char** argv)
 			renderer.resizedWindow();
 			data.m_resizedWindow = false;
 		}
-		renderer.update(0.0f);
+		renderer.beginFrame(0.0f);
+		//-- drawSprite will got here
+		renderer.endFrame();
 	}
 
 	glfwDestroyWindow(win);
