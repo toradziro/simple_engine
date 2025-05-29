@@ -155,10 +155,6 @@ void VkGraphicDevice::init(GLFWwindow* window)
 		createTextureImageView();
 		std::cout << "createTextureSampler" << std::endl;
 		createTextureSampler();
-		std::cout << "createVertexBuffer" << std::endl;
-		createVertexBuffer();
-		std::cout << "createIndexBuffer" << std::endl;
-		createIndexBuffer();
 		std::cout << "createUniformBuffers" << std::endl;
 		createUniformBuffers();
 		std::cout << "createDescriptorPool" << std::endl;
@@ -202,10 +198,6 @@ void VkGraphicDevice::shutdown()
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
-	m_logicalDevice.destroyBuffer(m_indexBuffer);
-	m_logicalDevice.freeMemory(m_indexBufferMem);
-	m_logicalDevice.destroyBuffer(m_vertexBuffer);
-	m_logicalDevice.freeMemory(m_vertexBufferMem);
 
 	m_logicalDevice.destroySampler(m_textureSampler);
 	m_logicalDevice.destroyImageView(m_textureImageView);
@@ -223,78 +215,17 @@ void VkGraphicDevice::shutdown()
 	m_vkInstance.destroy();
 }
 
-void VkGraphicDevice::update(float dt)
-{
-	try
-	{
-		drawFrame(dt);
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << "Error during initialization: " << e.what() << std::endl;
-	}
-}
-
-void VkGraphicDevice::drawFrame(float /*dt*/)
-{
-	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame]
-		, vk::True
-			, UINT64_MAX));
-
-	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain
-		, UINT64_MAX
-		, m_imageAvailableSemaphores[m_currFrame]);
-
-	if (result == vk::Result::eErrorOutOfDateKHR)
-	{
-		recreateSwapChain();
-		return;
-	}
-	else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
-	{
-		throw std::runtime_error("failed to acquire swap chain image!");
-	}
-	//-- Only reset the fence if we are submitting work
-	m_logicalDevice.resetFences(m_inFlightFences[m_currFrame]);
-
-	m_commandBuffers[m_currFrame].reset();
-	recordCommandBuffer(m_commandBuffers[m_currFrame], imageIndex);
-
-	updateUniformBuffer();
-
-	//-- Submitting command buffer
-	vk::SubmitInfo submitInfo = {};
-	vk::PipelineStageFlags waitStages = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-	submitInfo.setWaitSemaphoreCount(1)
-		.setWaitSemaphores(m_imageAvailableSemaphores[m_currFrame])
-		.setWaitDstStageMask(waitStages)
-		.setSignalSemaphoreCount(1)
-		.setSignalSemaphores(m_renderFinishedSemaphores[m_currFrame])
-		.setCommandBufferCount(1)
-		.setCommandBuffers(m_commandBuffers[m_currFrame]);
-
-	auto submitRes = m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
-
-	vk::PresentInfoKHR presentInfo = {};
-	presentInfo.setWaitSemaphoreCount(1)
-		.setWaitSemaphores(m_renderFinishedSemaphores[m_currFrame])
-		.setSwapchainCount(1)
-		.setSwapchains(m_swapchain)
-		.setImageIndices(imageIndex);
-
-	auto resPresent = m_queues.m_presentationQueue.presentKHR(presentInfo);
-	if (resPresent == vk::Result::eErrorOutOfDateKHR || m_framebufferResized)
-	{
-		m_framebufferResized = false;
-		recreateSwapChain();
-	}
-	else if (resPresent != vk::Result::eSuccess && resPresent != vk::Result::eSuboptimalKHR)
-	{
-		throw std::runtime_error("failed to present swap chain image!");
-	}
-
-	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
-}
+//void VkGraphicDevice::update(float dt)
+//{
+//	try
+//	{
+//		drawFrame(dt);
+//	}
+//	catch (const std::exception& e)
+//	{
+//		std::cerr << "Error during initialization: " << e.what() << std::endl;
+//	}
+//}
 
 void VkGraphicDevice::beginFrame(float /*dt*/)
 {
@@ -323,10 +254,13 @@ void VkGraphicDevice::beginFrame(float /*dt*/)
 	m_commandBuffers[m_currFrame].reset();
 }
 
-void VkGraphicDevice::endFrame()
+void VkGraphicDevice::endFrame(const VulkanBufferMemory& vertices, const VulkanBufferMemory& indexBuffer, uint16_t spriteCount)
 {
-	recordCommandBuffer(m_commandBuffers[m_currFrame], m_currImageIndex);
-
+	recordCommandBuffer(m_commandBuffers[m_currFrame]
+		, m_currImageIndex
+		, vertices
+		, indexBuffer
+		, spriteCount);
 	updateUniformBuffer();
 
 	//-- Submitting command buffer
@@ -989,10 +923,13 @@ void VkGraphicDevice::createTextureSampler()
 	m_textureSampler = sampler;
 }
 
-void VkGraphicDevice::createVertexBuffer()
+VulkanBufferMemory VkGraphicDevice::createCombinedVertexBuffer(
+	const std::vector<std::array<VertexData, 4>>& sprites)
 {
-	auto bufferSize = m_vertices.size() * sizeof(VertexData);
+	size_t totalVertices = sprites.size() * 4;
+	auto bufferSize = totalVertices * sizeof(VertexData);
 
+	VulkanBufferMemory resultMemory;
 	vk::Buffer stagingBuffer;
 	vk::DeviceMemory stagingBufferMemory;
 
@@ -1003,25 +940,69 @@ void VkGraphicDevice::createVertexBuffer()
 		stagingBufferMemory);
 
 	void* data = nullptr;
-	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, bufferSize, {}, &data);
-	memcpy(data, m_vertices.data(), bufferSize);
+	auto mapResult = m_logicalDevice.mapMemory(stagingBufferMemory, 0, bufferSize, {}, &data);
+
+	VertexData* vertexData = static_cast<VertexData*>(data);
+	size_t vertexIndex = 0;
+
+	memcpy(data, sprites.data(), bufferSize);
 
 	m_logicalDevice.unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize,
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		m_vertexBuffer,
-		m_vertexBufferMem);
+		resultMemory.m_Buffer,
+		resultMemory.m_BufferMem);
 
-	copyBuffer(stagingBuffer, m_vertexBuffer, bufferSize);
+	copyBuffer(stagingBuffer, resultMemory.m_Buffer, bufferSize);
+
 	m_logicalDevice.destroyBuffer(stagingBuffer);
 	m_logicalDevice.freeMemory(stagingBufferMemory);
+
+	return resultMemory;
 }
 
-void VkGraphicDevice::createIndexBuffer()
+uint8_t VkGraphicDevice::maxFrames() const
 {
-	auto bufferSize = m_indicies.size() * sizeof(uint16_t);
+	return C_MAX_FRAMES_IN_FLIGHT;
+}
+
+uint8_t VkGraphicDevice::currFrame() const
+{
+	return m_currFrame;
+}
+
+void VkGraphicDevice::waitGraphicIdle()
+{
+	m_queues.m_graphicQueue.waitIdle();
+}
+
+auto VkGraphicDevice::createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory
+{
+	std::vector<uint16_t> indicies;
+	indicies.resize(spriteCount * 6);
+	constexpr uint32_t C_VERTICES_IN_QUAD = 4;
+	uint32_t offset = 0;
+
+	for (uint32_t sprite = 0; sprite < spriteCount; ++sprite)
+	{
+		uint32_t baseIndex = sprite * 6;
+
+		indicies[baseIndex + 0] = offset + 0;
+		indicies[baseIndex + 1] = offset + 1;
+		indicies[baseIndex + 2] = offset + 2;
+
+		indicies[baseIndex + 3] = offset + 2;
+		indicies[baseIndex + 4] = offset + 3;
+		indicies[baseIndex + 5] = offset + 0;
+
+		offset += C_VERTICES_IN_QUAD;
+	}
+
+	VulkanBufferMemory resultMemory;
+
+	auto bufferSize = indicies.size() * sizeof(uint16_t);
 
 	vk::Buffer stagingBuffer;
 	vk::DeviceMemory stagingBufferMemory;
@@ -1034,19 +1015,21 @@ void VkGraphicDevice::createIndexBuffer()
 
 	void* data = nullptr;
 	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, bufferSize, {}, &data);
-	memcpy(data, m_indicies.data(), bufferSize);
+	memcpy(data, indicies.data(), bufferSize);
 
 	m_logicalDevice.unmapMemory(stagingBufferMemory);
 
 	createBuffer(bufferSize,
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		m_indexBuffer,
-		m_indexBufferMem);
+		resultMemory.m_Buffer,
+		resultMemory.m_BufferMem);
 
-	copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
+	copyBuffer(stagingBuffer, resultMemory.m_Buffer, bufferSize);
 	m_logicalDevice.destroyBuffer(stagingBuffer);
 	m_logicalDevice.freeMemory(stagingBufferMemory);
+
+	return resultMemory;
 }
 
 void VkGraphicDevice::createUniformBuffers()
@@ -1071,6 +1054,12 @@ void VkGraphicDevice::createUniformBuffers()
 			{},
 			&m_uniformBuffersMapped[i]);
 	}
+}
+
+void VkGraphicDevice::clearBuffer(VulkanBufferMemory memory)
+{
+	m_logicalDevice.destroyBuffer(memory.m_Buffer);
+	m_logicalDevice.freeMemory(memory.m_BufferMem);
 }
 
 void VkGraphicDevice::createDescriptorPool()
@@ -1201,7 +1190,11 @@ void VkGraphicDevice::setupPhysicalDevice()
 	assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
 }
 
-void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t imageIndex)
+void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
+	, uint32_t imageIndex
+	, const VulkanBufferMemory& vertices
+	, const VulkanBufferMemory& indexBuffer
+	, uint16_t spriteCount)
 {
 	vk::CommandBufferBeginInfo cmdBBeginfo = {};
 	VULKAN_CALL_CHECK(commandBuffer.begin(&cmdBBeginfo));
@@ -1219,8 +1212,8 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint3
 	commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
 
-	commandBuffer.bindVertexBuffers(0, { m_vertexBuffer }, { 0 });
-	commandBuffer.bindIndexBuffer(m_indexBuffer, 0, vk::IndexType::eUint16);
+	commandBuffer.bindVertexBuffers(0, vertices.m_Buffer, { 0 });
+	commandBuffer.bindIndexBuffer(indexBuffer.m_Buffer, 0, vk::IndexType::eUint16);
 
 	vk::Viewport viewport = {};
 	viewport.setX(0.0f).setY(0.0f)
@@ -1237,7 +1230,8 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer, uint3
 		m_pipelineLayout,
 		0,
 		m_descriptorSets[m_currFrame], {});
-	commandBuffer.drawIndexed(m_indicies.size(), 1, 0, 0, 0);
+
+	commandBuffer.drawIndexed(spriteCount * 6, 1, 0, 0, 0);
 	commandBuffer.endRenderPass();
 	auto res = commandBuffer.end();
 }

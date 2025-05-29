@@ -68,6 +68,12 @@ struct UniformBufferObject
 	glm::mat4	m_proj;
 };
 
+struct VulkanBufferMemory
+{
+	vk::Buffer						m_Buffer;
+	vk::DeviceMemory				m_BufferMem;
+};
+
 class VkGraphicDevice
 {
 public:
@@ -75,15 +81,25 @@ public:
 
 	void init(GLFWwindow* window);
 	void shutdown();
-	void update(float /*dt*/);
+	//void update(float /*dt*/);
 	void resizedWindow()
 	{
 		m_framebufferResized = true;
 	}
 
-	void	drawFrame(float /*dt*/);
+	//void	drawFrame(float /*dt*/);
 	void	beginFrame(float /*dt*/);
-	void	endFrame();
+	void	endFrame(const VulkanBufferMemory& vertices, const VulkanBufferMemory& indexBuffer, uint16_t spriteCount);
+
+	auto	createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory;
+	void	clearBuffer(VulkanBufferMemory memory);
+
+	VulkanBufferMemory createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites);
+	
+	uint8_t	maxFrames() const;
+	uint8_t	currFrame() const;
+
+	void	waitGraphicIdle();
 
 private:
 	void	updateUniformBuffer();
@@ -104,8 +120,8 @@ private:
 	void	createTextureImage();
 	void	createTextureImageView();
 	void	createTextureSampler();
-	void	createVertexBuffer();
-	void	createIndexBuffer();
+	//void	createVertexBuffer();
+	//void	createIndexBuffer();
 	void	createUniformBuffers();
 	void	createDescriptorPool();
 	void	createDescriptorsSets();
@@ -113,7 +129,11 @@ private:
 	void	createSyncObjects();
 	void	setupPhysicalDevice();
 
-	void	recordCommandBuffer(vk::CommandBuffer commandBuffer, uint32_t imageIndex);
+	void	recordCommandBuffer(vk::CommandBuffer commandBuffer
+		, uint32_t imageIndex
+		, const VulkanBufferMemory& vertices
+		, const VulkanBufferMemory& indexBuffer,
+		uint16_t spriteCount);
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
@@ -185,10 +205,10 @@ private:
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
 
-	vk::Buffer						m_vertexBuffer;
-	vk::DeviceMemory				m_vertexBufferMem;
-	vk::Buffer						m_indexBuffer;
-	vk::DeviceMemory				m_indexBufferMem;
+	//vk::Buffer						m_vertexBuffer;
+	//vk::DeviceMemory				m_vertexBufferMem;
+	//vk::Buffer						m_indexBuffer;
+	//vk::DeviceMemory				m_indexBufferMem;
 	std::vector<vk::Buffer>			m_uniformBuffers;
 	std::vector<vk::DeviceMemory>	m_uniformBuffersMemory;
 	std::vector<void*>				m_uniformBuffersMapped;
@@ -209,12 +229,12 @@ private:
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
 
-	const std::vector<VertexData>	m_vertices = {
-		{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-		{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-		{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	};
+	//const std::vector<VertexData>	m_vertices = {
+	//	{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+	//	{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+	//	{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+	//	{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+	//};
 
 	const std::vector<uint16_t>		m_indicies = { 0, 1, 2, 2, 3, 0 };
 

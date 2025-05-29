@@ -39,6 +39,19 @@ int main(int argc, char** argv)
 
 	Renderer renderer(win);
 
+	const std::array<VertexData, 4> firstQuad = {
+		VertexData{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+		VertexData{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+		VertexData{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+		VertexData{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+	};
+	const std::array<VertexData, 4> secondQuad = {
+		VertexData{{0.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+		VertexData{{1.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+		VertexData{{1.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+		VertexData{{0.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+	};
+
 	while (!data.m_shouldClouseWindow)
 	{
 		glfwPollEvents();
@@ -48,6 +61,8 @@ int main(int argc, char** argv)
 			data.m_resizedWindow = false;
 		}
 		renderer.beginFrame(0.0f);
+		renderer.drawSprite({ firstQuad });
+		renderer.drawSprite({ secondQuad });
 		//-- drawSprite will got here
 		renderer.endFrame();
 	}
