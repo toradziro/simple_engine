@@ -823,7 +823,8 @@ void VkGraphicDevice::createCommandPool()
 
 void VkGraphicDevice::createTextureImage()
 {
-	constexpr auto C_IMAGE_PATH = "images/nyan_cat.png";
+	//constexpr auto C_IMAGE_PATH = "images/nyan_cat.png";
+	constexpr auto C_IMAGE_PATH = "images/e_v.png";
 
 	auto curr_path = std::filesystem::current_path();
 	auto root_path = curr_path.parent_path();
