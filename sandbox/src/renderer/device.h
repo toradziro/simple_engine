@@ -97,7 +97,7 @@ public:
 
 	void	setTexture(std::unique_ptr<VulkanTexture>&& texture) { m_texture = std::move(texture); }
 
-	VulkanBufferMemory createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites);
+	VulkanBufferMemory	createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites);
 	
 	uint8_t	maxFrames() const;
 	uint8_t	currFrame() const;
@@ -108,7 +108,7 @@ public:
 
 	uint32_t	findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
 
-	vk::Device& getLogicalDevice() { return m_logicalDevice; }
+	vk::Device&	getLogicalDevice() { return m_logicalDevice; }
 
 	void	createVkInstance();
 	void	createLogicalDevice();
@@ -125,11 +125,12 @@ public:
 	void	createUniformBuffers();
 	void	createDescriptorPool();
 	void	createDescriptorsSets();
-	vk::DescriptorSet	createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView);
 	void	freeDescriptorSetFromPool(vk::DescriptorSet& descriptorSet);
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice();
+
+	vk::DescriptorSet	createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView);
 
 	void	recordCommandBuffer(vk::CommandBuffer commandBuffer
 		, uint32_t imageIndex
@@ -156,13 +157,6 @@ public:
 		, vk::MemoryPropertyFlags memPropFlags
 		, vk::Buffer& buffer
 		, vk::DeviceMemory& deviceMemory);
-
-	void	createImage(uint32_t width
-		, uint32_t height
-		, vk::ImageUsageFlags usage
-		, vk::MemoryPropertyFlags memPropFlags
-		, vk::Image& image
-		, vk::DeviceMemory& imageMemory);
 
 	void	transitionImage(vk::Image image
 		, vk::Format format
@@ -191,8 +185,7 @@ private:
 	PhysicalDeviceData				m_physicalDeviceData;
 	std::vector<SwapchainImage>		m_swapchainImages;
 	Queues							m_queues;
-	UniformBufferObject				m_modelViewProj = {};
-	GLFWwindow* m_window = nullptr;
+	GLFWwindow*						m_window = nullptr;
 	vk::Instance					m_vkInstance;
 	vk::PhysicalDevice				m_physicalDevice;
 	vk::Device						m_logicalDevice;
@@ -227,15 +220,13 @@ private:
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
 
-	const std::vector<uint16_t>		m_indicies = { 0, 1, 2, 2, 3, 0 };
-
 	uint32_t						m_currFrame = 0;
 	uint32_t						m_currImageIndex = 0;
 
 	bool							m_framebufferResized = false;
 #ifdef NDEBUG
-	const bool			enableValidationLayers = false;
+	const bool						m_enableValidationLayers = false;
 #else
-	const bool			enableValidationLayers = true;
+	const bool						m_enableValidationLayers = true;
 #endif
 };

@@ -340,7 +340,7 @@ void VkGraphicDevice::createVkInstance()
 
 	//-- This variable we will use to enable validation layers
 	std::vector<const char*> validationLayers;
-	if (enableValidationLayers)
+	if (m_enableValidationLayers)
 	{
 		validationLayers.push_back("VK_LAYER_KHRONOS_validation");
 		checkValidationLayerSupport(validationLayers);
@@ -1332,46 +1332,6 @@ void VkGraphicDevice::createBuffer(vk::DeviceSize size
 	}
 }
 
-void VkGraphicDevice::createImage(uint32_t width
-	, uint32_t height
-	, vk::ImageUsageFlags usage
-	, vk::MemoryPropertyFlags memPropFlags
-	, vk::Image& image
-	, vk::DeviceMemory& imageMemory)
-{
-	vk::ImageCreateInfo createInfo = {};
-	createInfo.setImageType(vk::ImageType::e2D)
-		.setExtent({ width, height, 1 })
-		.setMipLevels(1)
-		.setArrayLayers(1)
-		.setFormat(vk::Format::eR8G8B8A8Srgb)
-		.setTiling(vk::ImageTiling::eOptimal)
-		.setInitialLayout(vk::ImageLayout::eUndefined)
-		.setUsage(usage)
-		.setSharingMode(vk::SharingMode::eExclusive)
-		.setSamples(vk::SampleCountFlagBits::e1);
-
-	auto [result, createdImage] = m_logicalDevice.createImage(createInfo);
-	image = createdImage;
-
-	vk::MemoryRequirements memReq = {};
-	memReq = m_logicalDevice.getImageMemoryRequirements(image);
-
-	uint32_t memType = findMemoryType(memReq.memoryTypeBits, memPropFlags);
-
-	vk::MemoryAllocateInfo allocInfo = {};
-	allocInfo.setMemoryTypeIndex(memType)
-		.setAllocationSize(memReq.size);
-
-	{
-		auto [res, allocatedMemory] = m_logicalDevice.allocateMemory(allocInfo);
-		VULKAN_CALL_CHECK(res);
-		imageMemory = allocatedMemory;
-		auto bindImageRes = m_logicalDevice.bindImageMemory(image, imageMemory, 0);
-		VULKAN_CALL_CHECK(bindImageRes);
-	}
-}
-
 void VkGraphicDevice::transitionImage(vk::Image image
 	, vk::Format format
 	, vk::ImageLayout oldLayout
@@ -1532,10 +1492,6 @@ PhysicalDeviceData VkGraphicDevice::checkIfPhysicalDeviceSuitable(vk::PhysicalDe
 	{
 		data.m_score += 1;
 	}
-
-	//-- Information about what device can do (geom shaders, tess shaders, wide lines, etc)
-	//vk::PhysicalDeviceFeatures deviceFeatures = {};
-	//vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
 
 	return data;
 }
