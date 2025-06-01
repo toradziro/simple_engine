@@ -18,6 +18,8 @@ public:
 	void drawSprite(const SpriteInfo& spriteInfo);
 	void resizedWindow() { m_device.resizedWindow(); }
 
+	void setTexture(const std::string& path);
+
 private:
 	//void clearVertexBuffers();
 

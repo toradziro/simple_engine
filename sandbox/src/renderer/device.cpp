@@ -18,9 +18,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 namespace
 {
 
@@ -116,6 +113,7 @@ std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions()
 
 VkGraphicDevice::~VkGraphicDevice()
 {
+	m_texture.reset();
 	shutdown();
 }
 
@@ -149,10 +147,6 @@ void VkGraphicDevice::init(GLFWwindow* window)
 		createFramebuffer();
 		std::cout << "createCommandPool" << std::endl;
 		createCommandPool();
-		std::cout << "createTextureImage" << std::endl;
-		createTextureImage();
-		std::cout << "createTextureImageView" << std::endl;
-		createTextureImageView();
 		std::cout << "createTextureSampler" << std::endl;
 		createTextureSampler();
 		std::cout << "createUniformBuffers" << std::endl;
@@ -194,15 +188,13 @@ void VkGraphicDevice::shutdown()
 		m_logicalDevice.freeMemory(mem);
 	}
 	m_logicalDevice.destroyDescriptorPool(m_descriptorPool);
-	m_logicalDevice.destroyDescriptorSetLayout(m_descriptorSetLayout);
+	m_logicalDevice.destroyDescriptorSetLayout(m_uniformsSetLayout);
+	m_logicalDevice.destroyDescriptorSetLayout(m_texturesSetLayout);
 	m_logicalDevice.freeCommandBuffers(m_commandPool, m_commandBuffers);
 	m_logicalDevice.destroyCommandPool(m_commandPool);
 	cleanupSwapchain();
 
 	m_logicalDevice.destroySampler(m_textureSampler);
-	m_logicalDevice.destroyImageView(m_textureImageView);
-	m_logicalDevice.destroyImage(m_textureImage);
-	m_logicalDevice.freeMemory(m_textureImageMemory);
 
 	m_logicalDevice.destroyPipeline(m_graphicsPipeline);
 	m_logicalDevice.destroyPipelineLayout(m_pipelineLayout);
@@ -214,18 +206,6 @@ void VkGraphicDevice::shutdown()
 	m_vkInstance.destroySurfaceKHR(m_surface);
 	m_vkInstance.destroy();
 }
-
-//void VkGraphicDevice::update(float dt)
-//{
-//	try
-//	{
-//		drawFrame(dt);
-//	}
-//	catch (const std::exception& e)
-//	{
-//		std::cerr << "Error during initialization: " << e.what() << std::endl;
-//	}
-//}
 
 void VkGraphicDevice::beginFrame(float /*dt*/)
 {
@@ -597,29 +577,37 @@ void VkGraphicDevice::createShaderModule()
 
 void VkGraphicDevice::createDescriptorSetLayout()
 {
-	vk::DescriptorSetLayoutBinding layoutBinding = {};
-	layoutBinding.setDescriptorType(vk::DescriptorType::eUniformBuffer)
-		.setDescriptorCount(1)
-		.setBinding(0)
-		.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+	{
+		vk::DescriptorSetLayoutBinding uniformLayoutBinding = {};
+		uniformLayoutBinding.setDescriptorType(vk::DescriptorType::eUniformBuffer)
+			.setDescriptorCount(1)
+			.setBinding(0)
+			.setStageFlags(vk::ShaderStageFlagBits::eVertex);
+	
+		vk::DescriptorSetLayoutCreateInfo createInfo = {};
+		createInfo.setBindingCount(1)
+			.setBindings(uniformLayoutBinding);
+		{
+			auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
+			m_uniformsSetLayout = layout;
+		}
+	}
 
-	vk::DescriptorSetLayoutBinding samplerLayoutBinding = {};
-	samplerLayoutBinding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-		.setDescriptorCount(1)
-		.setBinding(1)
-		.setStageFlags(vk::ShaderStageFlagBits::eFragment);
+	{
+		vk::DescriptorSetLayoutBinding samplerLayoutBinding = {};
+		samplerLayoutBinding.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+			.setDescriptorCount(1)
+			.setBinding(0)
+			.setStageFlags(vk::ShaderStageFlagBits::eFragment);
 
-	std::array<vk::DescriptorSetLayoutBinding, 2> layoutBindings = {
-		layoutBinding
-		, samplerLayoutBinding
-	};
-
-	vk::DescriptorSetLayoutCreateInfo createInfo = {};
-	createInfo.setBindingCount(1)
-		.setBindings(layoutBindings);
-
-	auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
-	m_descriptorSetLayout = layout;
+		vk::DescriptorSetLayoutCreateInfo createInfo = {};
+		createInfo.setBindingCount(1)
+			.setBindings(samplerLayoutBinding);
+		{
+			auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
+			m_texturesSetLayout = layout;
+		}
+	}
 }
 
 void VkGraphicDevice::createPipeline()
@@ -711,9 +699,10 @@ void VkGraphicDevice::createPipeline()
 		.setPAttachments(&colorBlendAttachment);
 
 	//-- We will need layout for uniforms
+	std::array<vk::DescriptorSetLayout, 2> layouts = { m_uniformsSetLayout, m_texturesSetLayout };
 	vk::PipelineLayoutCreateInfo pipelineLayoutInfo = {};
-	pipelineLayoutInfo.setSetLayouts(m_descriptorSetLayout)
-		.setSetLayoutCount(1);
+	pipelineLayoutInfo.setSetLayouts(layouts)
+		.setSetLayoutCount(2);
 
 	VULKAN_CALL_CHECK(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
 		, nullptr
@@ -819,84 +808,6 @@ void VkGraphicDevice::createCommandPool()
 	VULKAN_CALL_CHECK(m_logicalDevice.createCommandPool(&poolInfo
 		, nullptr
 		, &m_commandPool));
-}
-
-void VkGraphicDevice::createTextureImage()
-{
-	//constexpr auto C_IMAGE_PATH = "images/nyan_cat.png";
-	constexpr auto C_IMAGE_PATH = "images/e_v.png";
-
-	auto curr_path = std::filesystem::current_path();
-	auto root_path = curr_path.parent_path();
-
-	auto full_cat_path = root_path / C_IMAGE_PATH;
-
-	int texture_width = 0;
-	int texture_height = 0;
-	int tex_channels = 0;
-
-	stbi_set_flip_vertically_on_load(true);
-	stbi_uc* pixels = stbi_load(full_cat_path.string().c_str()
-		, &texture_width
-		, &texture_height
-		, &tex_channels
-		, STBI_rgb_alpha);
-
-	if (!pixels)
-	{
-		assert(false);
-	}
-
-	//-- 4 bytes per pixel
-	vk::DeviceSize imageSize = texture_width * texture_height * 4;
-
-	vk::Buffer stagingBuffer;
-	vk::DeviceMemory stagingBufferMemory;
-
-	createBuffer(imageSize,
-		vk::BufferUsageFlagBits::eTransferSrc,
-		vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-		stagingBuffer,
-		stagingBufferMemory);
-
-	void* data = nullptr;
-	auto res = m_logicalDevice.mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
-	memcpy(data, pixels, imageSize);
-
-	m_logicalDevice.unmapMemory(stagingBufferMemory);
-	stbi_image_free(pixels);
-
-	createImage(texture_width
-		, texture_height
-		, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled
-		, vk::MemoryPropertyFlagBits::eDeviceLocal
-		, m_textureImage
-		, m_textureImageMemory);
-
-	transitionImage(m_textureImage,
-		vk::Format::eR8G8B8A8Srgb,
-		vk::ImageLayout::eUndefined,
-		vk::ImageLayout::eTransferDstOptimal);
-
-	copyBufferToImage(stagingBuffer,
-		m_textureImage,
-		texture_width,
-		texture_height);
-
-	transitionImage(m_textureImage,
-		vk::Format::eR8G8B8A8Srgb,
-		vk::ImageLayout::eTransferDstOptimal,
-		vk::ImageLayout::eShaderReadOnlyOptimal);
-
-	m_logicalDevice.destroyBuffer(stagingBuffer);
-	m_logicalDevice.freeMemory(stagingBufferMemory);
-}
-
-void VkGraphicDevice::createTextureImageView()
-{
-	m_textureImageView = createImageView(m_textureImage
-		, vk::Format::eR8G8B8A8Srgb
-		, vk::ImageAspectFlagBits::eColor);
 }
 
 void VkGraphicDevice::createTextureSampler()
@@ -1065,6 +976,8 @@ void VkGraphicDevice::clearBuffer(VulkanBufferMemory memory)
 
 void VkGraphicDevice::createDescriptorPool()
 {
+	constexpr int C_MAX_TEXTURES = 10;
+
 	std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
 	poolSizes[0].setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
 		.setType(vk::DescriptorType::eUniformBuffer);
@@ -1072,9 +985,10 @@ void VkGraphicDevice::createDescriptorPool()
 		.setType(vk::DescriptorType::eCombinedImageSampler);
 
 	vk::DescriptorPoolCreateInfo createInfo = {};
-	createInfo.setPoolSizeCount(1)
+	createInfo.setPoolSizeCount(poolSizes.size())
 		.setPoolSizes(poolSizes)
-		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT);
+		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT + C_MAX_TEXTURES)
+		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
 	auto [res, pool] = m_logicalDevice.createDescriptorPool(createInfo);
 	m_descriptorPool = pool;
@@ -1082,7 +996,7 @@ void VkGraphicDevice::createDescriptorPool()
 
 void VkGraphicDevice::createDescriptorsSets()
 {
-	std::vector<vk::DescriptorSetLayout> layouts(C_MAX_FRAMES_IN_FLIGHT, m_descriptorSetLayout);
+	std::vector<vk::DescriptorSetLayout> layouts(C_MAX_FRAMES_IN_FLIGHT, m_uniformsSetLayout);
 	vk::DescriptorSetAllocateInfo allocInfo = {};
 	allocInfo.setDescriptorPool(m_descriptorPool)
 		.setSetLayouts(layouts);
@@ -1096,27 +1010,48 @@ void VkGraphicDevice::createDescriptorsSets()
 			.setOffset(0)
 			.setRange(sizeof(UniformBufferObject));
 
-		vk::DescriptorImageInfo imageInfo = {};
-		imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
-			.setImageView(m_textureImageView)
-			.setSampler(m_textureSampler);
-
-		std::array<vk::WriteDescriptorSet, 2> descriptorsWrite = {};
-		descriptorsWrite[0].setBufferInfo(bufferInfo)
+		vk::WriteDescriptorSet descriptorsWrite = {};
+		descriptorsWrite.setBufferInfo(bufferInfo)
 			.setDstSet(m_descriptorSets[i])
 			.setDstBinding(0)
 			.setDstArrayElement(0)
 			.setDescriptorType(vk::DescriptorType::eUniformBuffer)
 			.setDescriptorCount(1);
-		descriptorsWrite[1].setImageInfo(imageInfo)
-			.setDstSet(m_descriptorSets[i])
-			.setDstBinding(1)
-			.setDstArrayElement(0)
-			.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
-			.setDescriptorCount(1);
 
 		m_logicalDevice.updateDescriptorSets(descriptorsWrite, {});
 	}
+}
+
+vk::DescriptorSet VkGraphicDevice::createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView)
+{
+	vk::DescriptorSetAllocateInfo allocInfo = {};
+	allocInfo.setDescriptorPool(m_descriptorPool)
+		.setDescriptorSetCount(1)
+		.setSetLayouts(m_texturesSetLayout);
+
+	auto [res, allocatedDescriptors] = m_logicalDevice.allocateDescriptorSets(allocInfo);
+
+	vk::DescriptorImageInfo imageInfo = {};
+	imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
+		.setImageView(imageView)
+		.setSampler(m_textureSampler);
+
+	vk::WriteDescriptorSet descriptorsWrite = {};
+	descriptorsWrite.setImageInfo(imageInfo)
+		.setDstSet(allocatedDescriptors[0])
+		.setDstBinding(0)
+		.setDstArrayElement(0)
+		.setDescriptorType(vk::DescriptorType::eCombinedImageSampler)
+		.setDescriptorCount(1);
+
+	m_logicalDevice.updateDescriptorSets(descriptorsWrite, {});
+	
+	return allocatedDescriptors[0];
+}
+
+void VkGraphicDevice::freeDescriptorSetFromPool(vk::DescriptorSet& descriptorSet)
+{
+	m_logicalDevice.freeDescriptorSets(m_descriptorPool, descriptorSet);
 }
 
 void VkGraphicDevice::createCommandBuffer()
@@ -1227,10 +1162,12 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
 	commandBuffer.setScissor(0, scissor);
+
 	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
 		m_pipelineLayout,
 		0,
-		m_descriptorSets[m_currFrame], {});
+		{ m_descriptorSets[m_currFrame], m_texture->getDescriptorSet()},
+		{});
 
 	commandBuffer.drawIndexed(spriteCount * 6, 1, 0, 0, 0);
 	commandBuffer.endRenderPass();

@@ -21,6 +21,7 @@ int main(int argc, char** argv)
 	{
 		bool m_shouldClouseWindow = false;
 		bool m_resizedWindow = false;
+		bool m_buttomUpPressed = false;
 	};
 	WinData data = {};
 	glfwSetWindowUserPointer(win, &data);
@@ -38,6 +39,17 @@ int main(int argc, char** argv)
 		});
 
 	Renderer renderer(win);
+	int txtId = 0;
+	renderer.setTexture("images/nyan_cat.png");
+
+	glfwSetKeyCallback(win, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+		{
+			if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+			{
+				WinData* data = (WinData*)glfwGetWindowUserPointer(window);
+				data->m_buttomUpPressed = true;
+			}
+		});
 
 	const std::array<VertexData, 4> firstQuad = {
 		VertexData{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
@@ -59,6 +71,23 @@ int main(int argc, char** argv)
 		{
 			renderer.resizedWindow();
 			data.m_resizedWindow = false;
+		}
+		if (data.m_buttomUpPressed)
+		{
+			if (!(txtId % 3))
+			{
+				renderer.setTexture("images/gg2.png");
+			}
+			else if (!(txtId % 2))
+			{
+				renderer.setTexture("images/nyan_cat.png");
+			}
+			else
+			{
+				renderer.setTexture("images/e_v.png");
+			}
+			txtId++;
+			data.m_buttomUpPressed = false;
 		}
 		renderer.beginFrame(0.0f);
 		renderer.drawSprite({ firstQuad });

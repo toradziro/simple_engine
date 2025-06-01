@@ -8,10 +8,13 @@
 
 #include <vector>
 #include <array>
+#include <memory>
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+
+#include "texture.h"
 
 struct QueueFamilies
 {
@@ -81,18 +84,18 @@ public:
 
 	void init(GLFWwindow* window);
 	void shutdown();
-	//void update(float /*dt*/);
 	void resizedWindow()
 	{
 		m_framebufferResized = true;
 	}
 
-	//void	drawFrame(float /*dt*/);
 	void	beginFrame(float /*dt*/);
 	void	endFrame(const VulkanBufferMemory& vertices, const VulkanBufferMemory& indexBuffer, uint16_t spriteCount);
 
 	auto	createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory;
 	void	clearBuffer(VulkanBufferMemory memory);
+
+	void	setTexture(std::unique_ptr<VulkanTexture>&& texture) { m_texture = std::move(texture); }
 
 	VulkanBufferMemory createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites);
 	
@@ -101,10 +104,11 @@ public:
 
 	void	waitGraphicIdle();
 
-private:
 	void	updateUniformBuffer();
 
 	uint32_t	findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+
+	vk::Device& getLogicalDevice() { return m_logicalDevice; }
 
 	void	createVkInstance();
 	void	createLogicalDevice();
@@ -117,14 +121,12 @@ private:
 	void	createRenderPass();
 	void	createFramebuffer();
 	void	createCommandPool();
-	void	createTextureImage();
-	void	createTextureImageView();
 	void	createTextureSampler();
-	//void	createVertexBuffer();
-	//void	createIndexBuffer();
 	void	createUniformBuffers();
 	void	createDescriptorPool();
 	void	createDescriptorsSets();
+	vk::DescriptorSet	createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView);
+	void	freeDescriptorSetFromPool(vk::DescriptorSet& descriptorSet);
 	void	createCommandBuffer();
 	void	createSyncObjects();
 	void	setupPhysicalDevice();
@@ -199,22 +201,18 @@ private:
 	vk::ShaderModule				m_vertexShaderModule;
 	vk::ShaderModule				m_fragmentShaderModule;
 	vk::RenderPass					m_renderPass;
-	vk::DescriptorSetLayout			m_descriptorSetLayout;
+	vk::DescriptorSetLayout			m_uniformsSetLayout;
+	vk::DescriptorSetLayout			m_texturesSetLayout;
 	vk::DescriptorPool				m_descriptorPool;
 	std::vector<vk::DescriptorSet>	m_descriptorSets;
 	vk::PipelineLayout				m_pipelineLayout;
 	vk::Pipeline					m_graphicsPipeline;
 
-	//vk::Buffer						m_vertexBuffer;
-	//vk::DeviceMemory				m_vertexBufferMem;
-	//vk::Buffer						m_indexBuffer;
-	//vk::DeviceMemory				m_indexBufferMem;
 	std::vector<vk::Buffer>			m_uniformBuffers;
 	std::vector<vk::DeviceMemory>	m_uniformBuffersMemory;
 	std::vector<void*>				m_uniformBuffersMapped;
-	vk::Image						m_textureImage;
-	vk::DeviceMemory				m_textureImageMemory;
-	vk::ImageView					m_textureImageView;
+
+	std::unique_ptr<VulkanTexture>	m_texture;
 	vk::Sampler						m_textureSampler;
 
 	vk::CommandPool					m_commandPool;
@@ -228,13 +226,6 @@ private:
 	std::vector<vk::Semaphore>		m_imageAvailableSemaphores;
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
-
-	//const std::vector<VertexData>	m_vertices = {
-	//	{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-	//	{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-	//	{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-	//	{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	//};
 
 	const std::vector<uint16_t>		m_indicies = { 0, 1, 2, 2, 3, 0 };
 

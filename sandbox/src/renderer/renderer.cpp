@@ -1,8 +1,10 @@
 #include "renderer.h"
+#include <filesystem>
 
 Renderer::Renderer(GLFWwindow* window)
 {
 	m_device.init(window);
+
 	m_vertexBuffersToFrames.resize(m_device.maxFrames());
 	m_indexBuffersToFrames.resize(m_device.maxFrames());
 }
@@ -54,4 +56,14 @@ void Renderer::drawSprite(const SpriteInfo& spriteInfo)
 {
 	//-- Create vertex buffer here
 	m_sprites.push_back(spriteInfo.m_verticies);
+}
+
+void Renderer::setTexture(const std::string& path)
+{
+	auto curr_path = std::filesystem::current_path();
+	auto&& root_path = curr_path.parent_path();
+	auto&& full_cat_path = root_path / path;
+	auto texture = std::make_unique<VulkanTexture>(full_cat_path.string(), &m_device);
+
+	m_device.setTexture(std::move(texture));
 }
