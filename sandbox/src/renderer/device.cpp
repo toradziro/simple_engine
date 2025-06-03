@@ -23,26 +23,6 @@ namespace
 
 constexpr int	C_MAX_FRAMES_IN_FLIGHT = 2;
 
-#ifdef NDEBUG
-#define VULKAN_CALL_CHECK(x) \
-do { \
-    vk::Result __res = (x); \
-    if (__res != vk::Result::eSuccess) { \
-        std::cerr << "Vulkan error: " << static_cast<int>(__res) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
-        throw std::runtime_error("Vulkan error"); \
-    } \
-} while(0)
-#else
-#define VULKAN_CALL_CHECK(x) \
-do { \
-    vk::Result __res = (x); \
-    if (__res != vk::Result::eSuccess) { \
-        std::cerr << "Vulkan error: " << static_cast<int>(__res) << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
-        assert((x) == vk::Result::eSuccess); \
-    } \
-} while(0)
-#endif
-
 std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 	shaderc_shader_kind kind,
 	const std::string& name)
@@ -170,8 +150,8 @@ void VkGraphicDevice::init(GLFWwindow* window)
 
 void VkGraphicDevice::shutdown()
 {
-	auto waitIdleGraphicQueueRes = m_queues.m_graphicQueue.waitIdle();
-	auto waitIdlePresentationQueueRes = m_queues.m_presentationQueue.waitIdle();
+	m_queues.m_graphicQueue.waitIdle();
+	m_queues.m_presentationQueue.waitIdle();
 
 	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
@@ -209,9 +189,9 @@ void VkGraphicDevice::shutdown()
 
 void VkGraphicDevice::beginFrame(float /*dt*/)
 {
-	VULKAN_CALL_CHECK(m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame]
+	auto res = m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame]
 		, vk::True
-		, UINT64_MAX));
+		, UINT64_MAX);
 
 	auto [result, imageIndex] = m_logicalDevice.acquireNextImageKHR(m_swapchain
 		, UINT64_MAX
@@ -254,7 +234,7 @@ void VkGraphicDevice::endFrame(const VulkanBufferMemory& vertices, const VulkanB
 		.setCommandBufferCount(1)
 		.setCommandBuffers(m_commandBuffers[m_currFrame]);
 
-	auto submitRes = m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
+	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
 
 	vk::PresentInfoKHR presentInfo = {};
 	presentInfo.setWaitSemaphoreCount(1)
@@ -353,12 +333,12 @@ void VkGraphicDevice::createVkInstance()
 	createInfo.setPEnabledLayerNames(validationLayers);
 
 	//-- Create instance
-	VULKAN_CALL_CHECK(vk::createInstance(&createInfo, nullptr, &m_vkInstance));
+	m_vkInstance = vk::createInstance(createInfo);
 }
 
 void VkGraphicDevice::checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
 {
-	auto [res, extentionsProps] = vk::enumerateInstanceExtensionProperties();
+	auto extentionsProps = vk::enumerateInstanceExtensionProperties();
 	for (const char* extention : instanceExtentionsAppNeed)
 	{
 		auto itRes = std::ranges::find_if(extentionsProps, [&](const vk::ExtensionProperties& vkInst)
@@ -375,7 +355,7 @@ void VkGraphicDevice::checkExtentionsSupport(const std::vector<const char*>& ins
 
 void VkGraphicDevice::checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
 {
-	auto [res, availableLayers] = vk::enumerateInstanceLayerProperties();
+	auto availableLayers = vk::enumerateInstanceLayerProperties();
 
 	for (const char* layer : validationLayerAppNeed)
 	{
@@ -418,9 +398,7 @@ void VkGraphicDevice::createLogicalDevice()
 		.setPEnabledExtensionNames(C_DEVICE_EXTENTIONS);
 
 	//-- Creating logical device
-	VULKAN_CALL_CHECK(m_physicalDevice.createDevice(&deviceCreateInfo
-		, nullptr
-		, &m_logicalDevice));
+	m_logicalDevice = m_physicalDevice.createDevice(deviceCreateInfo);
 
 	//-- Queues are created automatically, we save it
 	m_logicalDevice.getQueue(m_physicalDeviceData.m_queueFamilies.m_graphicQueue
@@ -434,7 +412,7 @@ void VkGraphicDevice::createLogicalDevice()
 
 bool VkGraphicDevice::checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
 {
-	auto [res, extentionsProps] = physicalDevice.enumerateDeviceExtensionProperties();
+	auto extentionsProps = physicalDevice.enumerateDeviceExtensionProperties();
 
 	for (const char* extention : deviceExtentions)
 	{
@@ -464,7 +442,7 @@ void VkGraphicDevice::createSurface()
 
 void VkGraphicDevice::recreateSwapChain()
 {
-	auto waitIdleRes = m_logicalDevice.waitIdle();
+	m_logicalDevice.waitIdle();
 
 	cleanupSwapchain();
 
@@ -519,11 +497,9 @@ void VkGraphicDevice::createSwapchain()
 	swapChainCreateInfo.setOldSwapchain(VK_NULL_HANDLE)
 		.setSurface(m_surface);
 
-	VULKAN_CALL_CHECK(m_logicalDevice.createSwapchainKHR(&swapChainCreateInfo
-		, nullptr
-		, &m_swapchain));
+	m_swapchain = m_logicalDevice.createSwapchainKHR(swapChainCreateInfo);
 
-	auto [res, images] = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
+	auto images = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
 	for (auto& image : images)
 	{
 		m_swapchainImages.push_back({
@@ -563,16 +539,14 @@ void VkGraphicDevice::createShaderModule()
 	vk::ShaderModuleCreateInfo vertexShaderModuleCreateInfo = {};
 	vertexShaderModuleCreateInfo.setCodeSize(compiled_vertex_shader.size() * sizeof(uint32_t))
 		.setPCode(compiled_vertex_shader.data());
-	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&vertexShaderModuleCreateInfo
-		, nullptr
-		, &m_vertexShaderModule));
+	
+	m_vertexShaderModule = m_logicalDevice.createShaderModule(vertexShaderModuleCreateInfo);
 
 	vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo = {};
 	fragmentShaderModuleCreateInfo.setCodeSize(compiled_fragment_shader.size() * sizeof(uint32_t))
 		.setPCode(compiled_fragment_shader.data());
-	VULKAN_CALL_CHECK(m_logicalDevice.createShaderModule(&fragmentShaderModuleCreateInfo
-		, nullptr
-		, &m_fragmentShaderModule));
+
+	m_fragmentShaderModule= m_logicalDevice.createShaderModule(fragmentShaderModuleCreateInfo);
 }
 
 void VkGraphicDevice::createDescriptorSetLayout()
@@ -588,8 +562,7 @@ void VkGraphicDevice::createDescriptorSetLayout()
 		createInfo.setBindingCount(1)
 			.setBindings(uniformLayoutBinding);
 		{
-			auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
-			m_uniformsSetLayout = layout;
+			m_uniformsSetLayout = m_logicalDevice.createDescriptorSetLayout(createInfo);
 		}
 	}
 
@@ -604,8 +577,7 @@ void VkGraphicDevice::createDescriptorSetLayout()
 		createInfo.setBindingCount(1)
 			.setBindings(samplerLayoutBinding);
 		{
-			auto [res, layout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
-			m_texturesSetLayout = layout;
+			m_texturesSetLayout = m_logicalDevice.createDescriptorSetLayout(createInfo);
 		}
 	}
 }
@@ -704,9 +676,7 @@ void VkGraphicDevice::createPipeline()
 	pipelineLayoutInfo.setSetLayouts(layouts)
 		.setSetLayoutCount(2);
 
-	VULKAN_CALL_CHECK(m_logicalDevice.createPipelineLayout(&pipelineLayoutInfo
-		, nullptr
-		, &m_pipelineLayout));
+	m_pipelineLayout = m_logicalDevice.createPipelineLayout(pipelineLayoutInfo);
 
 	vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 	//-- Static part of pypline
@@ -726,11 +696,11 @@ void VkGraphicDevice::createPipeline()
 		.setRenderPass(m_renderPass)
 		.setSubpass(0);
 
-	VULKAN_CALL_CHECK(m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
+	auto res = m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
 		, 1
 		, &pipelineInfo
 		, nullptr
-		, &m_graphicsPipeline));
+		, &m_graphicsPipeline);
 }
 
 void VkGraphicDevice::createRenderPass()
@@ -769,10 +739,7 @@ void VkGraphicDevice::createRenderPass()
 		.setDependencyCount(1)
 		.setDependencies(dependency);
 
-	VULKAN_CALL_CHECK(m_logicalDevice.createRenderPass(&renderPassInfo
-		, nullptr
-		, &m_renderPass));
-
+	m_renderPass = m_logicalDevice.createRenderPass(renderPassInfo);
 }
 
 void VkGraphicDevice::createFramebuffer()
@@ -791,10 +758,7 @@ void VkGraphicDevice::createFramebuffer()
 			.setHeight(m_imageExtent.height)
 			.setLayers(1);
 
-		VULKAN_CALL_CHECK(m_logicalDevice.createFramebuffer(&framebufferInfo
-			, nullptr
-			, &m_swapChainFramebuffers[i]));
-
+		m_swapChainFramebuffers[i] = m_logicalDevice.createFramebuffer(framebufferInfo);
 		++i;
 	}
 }
@@ -805,9 +769,7 @@ void VkGraphicDevice::createCommandPool()
 	poolInfo.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
 		.setQueueFamilyIndex(m_physicalDeviceData.m_queueFamilies.m_graphicQueue);
 
-	VULKAN_CALL_CHECK(m_logicalDevice.createCommandPool(&poolInfo
-		, nullptr
-		, &m_commandPool));
+	m_commandPool = m_logicalDevice.createCommandPool(poolInfo);
 }
 
 void VkGraphicDevice::createTextureSampler()
@@ -831,8 +793,7 @@ void VkGraphicDevice::createTextureSampler()
 		.setMinLod(0.0f)
 		.setMaxLod(0.0f);
 
-	auto [res, sampler] = m_logicalDevice.createSampler(createInfo);
-	m_textureSampler = sampler;
+	m_textureSampler = m_logicalDevice.createSampler(createInfo);
 }
 
 VulkanBufferMemory VkGraphicDevice::createCombinedVertexBuffer(
@@ -976,8 +937,6 @@ void VkGraphicDevice::clearBuffer(VulkanBufferMemory memory)
 
 void VkGraphicDevice::createDescriptorPool()
 {
-	constexpr int C_MAX_TEXTURES = 10;
-
 	std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
 	poolSizes[0].setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
 		.setType(vk::DescriptorType::eUniformBuffer);
@@ -987,11 +946,10 @@ void VkGraphicDevice::createDescriptorPool()
 	vk::DescriptorPoolCreateInfo createInfo = {};
 	createInfo.setPoolSizeCount(poolSizes.size())
 		.setPoolSizes(poolSizes)
-		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT + C_MAX_TEXTURES)
+		.setMaxSets(C_MAX_FRAMES_IN_FLIGHT + m_maxTextures)
 		.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-	auto [res, pool] = m_logicalDevice.createDescriptorPool(createInfo);
-	m_descriptorPool = pool;
+	m_descriptorPool = m_logicalDevice.createDescriptorPool(createInfo);
 }
 
 void VkGraphicDevice::createDescriptorsSets()
@@ -1001,8 +959,7 @@ void VkGraphicDevice::createDescriptorsSets()
 	allocInfo.setDescriptorPool(m_descriptorPool)
 		.setSetLayouts(layouts);
 
-	auto res = m_logicalDevice.allocateDescriptorSets(allocInfo);
-	m_descriptorSets = res.value;
+	m_descriptorSets = m_logicalDevice.allocateDescriptorSets(allocInfo);
 	for (uint32_t i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
 		vk::DescriptorBufferInfo bufferInfo = {};
@@ -1029,7 +986,7 @@ vk::DescriptorSet VkGraphicDevice::createTextureDescriptorSet(vk::Image& image, 
 		.setDescriptorSetCount(1)
 		.setSetLayouts(m_texturesSetLayout);
 
-	auto [res, allocatedDescriptors] = m_logicalDevice.allocateDescriptorSets(allocInfo);
+	auto allocatedDescriptors = m_logicalDevice.allocateDescriptorSets(allocInfo);
 
 	vk::DescriptorImageInfo imageInfo = {};
 	imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -1061,8 +1018,7 @@ void VkGraphicDevice::createCommandBuffer()
 		.setCommandPool(m_commandPool)
 		.setLevel(vk::CommandBufferLevel::ePrimary);
 
-	auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
-	m_commandBuffers = commandBuffers;
+	m_commandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
 }
 
 void VkGraphicDevice::createSyncObjects()
@@ -1076,27 +1032,16 @@ void VkGraphicDevice::createSyncObjects()
 
 	for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 	{
-		{
-			auto [res, imageAvailableSemaphore] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
-			m_imageAvailableSemaphores.push_back(std::move(imageAvailableSemaphore));
-		}
-
-		{
-			auto [res, renderFinishedSemaphore] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
-			m_renderFinishedSemaphores.push_back(std::move(renderFinishedSemaphore));
-		}
-
-		{
-			auto [res, fence] = m_logicalDevice.createFence(fenceInfo);
-			m_inFlightFences.push_back(std::move(fence));
-		}
+		m_imageAvailableSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
+		m_renderFinishedSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
+		m_inFlightFences.push_back(m_logicalDevice.createFence(fenceInfo));
 	}
 
 }
 
 void VkGraphicDevice::setupPhysicalDevice()
 {
-	auto [res, physDevices] = m_vkInstance.enumeratePhysicalDevices();
+	auto physDevices = m_vkInstance.enumeratePhysicalDevices();
 
 	int bestScore = 0;
 	for (vk::PhysicalDevice& device : physDevices)
@@ -1133,7 +1078,7 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 	, uint16_t spriteCount)
 {
 	vk::CommandBufferBeginInfo cmdBBeginfo = {};
-	VULKAN_CALL_CHECK(commandBuffer.begin(&cmdBBeginfo));
+	commandBuffer.begin(cmdBBeginfo);
 
 	vk::RenderPassBeginInfo renderPassInfo = {};
 	vk::Rect2D renderArea = {};
@@ -1171,7 +1116,7 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 
 	commandBuffer.drawIndexed(spriteCount * 6, 1, 0, 0, 0);
 	commandBuffer.endRenderPass();
-	auto res = commandBuffer.end();
+	commandBuffer.end();
 }
 
 QueueFamilies VkGraphicDevice::checkQueueFamilies(vk::PhysicalDevice device) const
@@ -1191,10 +1136,7 @@ QueueFamilies VkGraphicDevice::checkQueueFamilies(vk::PhysicalDevice device) con
 				queueFamilies.m_graphicQueue = index;
 			}
 
-			vk::Bool32 presentSupport = VK_FALSE;
-			VULKAN_CALL_CHECK(device.getSurfaceSupportKHR(index
-				, m_surface
-				, &presentSupport));
+			 vk::Bool32 presentSupport = device.getSurfaceSupportKHR(index, m_surface);
 			if (presentSupport == VK_TRUE)
 			{
 				queueFamilies.m_presentationQueue = index;
@@ -1215,18 +1157,10 @@ QueueFamilies VkGraphicDevice::checkQueueFamilies(vk::PhysicalDevice device) con
 SwapChainDetails VkGraphicDevice::swapchainDetails(vk::PhysicalDevice device) const
 {
 	SwapChainDetails details;
-	VULKAN_CALL_CHECK(device.getSurfaceCapabilitiesKHR(m_surface, &details.m_surfaceCapabilities));
-
-	{
-		auto [res, surfaceSupportedFormats] = device.getSurfaceFormatsKHR(m_surface);
-		details.m_surfaceSupportedFormats = std::move(surfaceSupportedFormats);
-	}
-
-	{
-		auto [res, surfacePresentModes] = device.getSurfacePresentModesKHR(m_surface);
-		details.m_presentMode = std::move(surfacePresentModes);
-	}
-
+	
+	details.m_surfaceCapabilities = device.getSurfaceCapabilitiesKHR(m_surface);
+	details.m_surfaceSupportedFormats = device.getSurfaceFormatsKHR(m_surface);
+	details.m_presentMode = device.getSurfacePresentModesKHR(m_surface);
 	return details;
 }
 
@@ -1296,9 +1230,7 @@ vk::ImageView VkGraphicDevice::createImageView(vk::Image image, vk::Format forma
 		.setLevelCount(1)
 		.setBaseArrayLayer(0);
 
-	vk::ImageView res = {};
-	VULKAN_CALL_CHECK(m_logicalDevice.createImageView(&createInfo, nullptr, &res));
-	return res;
+	return m_logicalDevice.createImageView(createInfo);
 }
 
 void VkGraphicDevice::createBuffer(vk::DeviceSize size
@@ -1312,10 +1244,7 @@ void VkGraphicDevice::createBuffer(vk::DeviceSize size
 		.setUsage(usageFlags)
 		.setSharingMode(vk::SharingMode::eExclusive);
 
-	{
-		auto [res, createdBuffer] = m_logicalDevice.createBuffer(bufferInfo);
-		buffer = createdBuffer;
-	}
+	buffer = m_logicalDevice.createBuffer(bufferInfo);
 
 	vk::MemoryRequirements memReq = m_logicalDevice.getBufferMemoryRequirements(buffer);
 	uint32_t memType = findMemoryType(memReq.memoryTypeBits, memPropFlags);
@@ -1324,12 +1253,8 @@ void VkGraphicDevice::createBuffer(vk::DeviceSize size
 	allocInfo.setMemoryTypeIndex(memType)
 		.setAllocationSize(memReq.size);
 
-	{
-		auto [res, allocatedMemory] = m_logicalDevice.allocateMemory(allocInfo);
-		VULKAN_CALL_CHECK(res);
-		deviceMemory = allocatedMemory;
-		auto bindBufferRes = m_logicalDevice.bindBufferMemory(buffer, deviceMemory, 0);
-	}
+	deviceMemory = m_logicalDevice.allocateMemory(allocInfo);
+	m_logicalDevice.bindBufferMemory(buffer, deviceMemory, 0);
 }
 
 void VkGraphicDevice::transitionImage(vk::Image image
@@ -1374,7 +1299,7 @@ void VkGraphicDevice::transitionImage(vk::Image image
 		, vk::DependencyFlagBits::eByRegion
 		, {}
 		, {}
-	, barrier);
+		, barrier);
 
 	endSingleTimeCommand(commandBuffer);
 }
@@ -1424,26 +1349,26 @@ vk::CommandBuffer VkGraphicDevice::beginSingleTimeCommands()
 		.setCommandBufferCount(1);
 
 	vk::CommandBuffer commandBuffer = {};
-	auto [allocRes, commandBuffers] = m_logicalDevice.allocateCommandBuffers(allocateInfo);
+	auto commandBuffers = m_logicalDevice.allocateCommandBuffers(allocateInfo);
 	commandBuffer = *commandBuffers.begin();
 
 	vk::CommandBufferBeginInfo beginInfo = {};
 	beginInfo.setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-	auto cmdBeginRes = commandBuffer.begin(beginInfo);
+	commandBuffer.begin(beginInfo);
 	return commandBuffer;
 }
 
 void VkGraphicDevice::endSingleTimeCommand(vk::CommandBuffer commandBuffer)
 {
-	auto res = commandBuffer.end();
+	commandBuffer.end();
 
 	vk::SubmitInfo submitInfo = {};
 	submitInfo.setCommandBufferCount(1)
 		.setCommandBuffers({ commandBuffer });
 
-	res = m_queues.m_graphicQueue.submit(submitInfo);
-	res = m_queues.m_graphicQueue.waitIdle();
+	m_queues.m_graphicQueue.submit(submitInfo);
+	m_queues.m_graphicQueue.waitIdle();
 
 	m_logicalDevice.freeCommandBuffers(m_commandPool, { commandBuffer });
 }

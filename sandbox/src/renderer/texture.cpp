@@ -15,9 +15,6 @@ VulkanTexture::VulkanTexture(const std::string& path, VkGraphicDevice* device) :
 	loadFromFile(path);
 	createVulkanResources();
 	createDescriptorSet();
-
-	//std::cout << "Loaded texture: " << path
-	//	<< " (" << m_width << "x" << m_height << ")" << std::endl;
 }
 
 VulkanTexture::~VulkanTexture()
@@ -85,10 +82,7 @@ void VulkanTexture::createVulkanResources()
 		.setSamples(vk::SampleCountFlagBits::e1)
 		.setSharingMode(vk::SharingMode::eExclusive);
 
-	{
-		auto [res, image] = m_device->getLogicalDevice().createImage(imageInfo);
-		m_image = image;
-	}
+	m_image = m_device->getLogicalDevice().createImage(imageInfo);
 
 	// Allocate memory for texture
 	vk::MemoryRequirements memRequirements = m_device->getLogicalDevice().getImageMemoryRequirements(m_image);
@@ -98,10 +92,7 @@ void VulkanTexture::createVulkanResources()
 		.setMemoryTypeIndex(m_device->findMemoryType(memRequirements.memoryTypeBits,
 		vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-	{
-		auto [res, imageMemory] = m_device->getLogicalDevice().allocateMemory(allocInfo);
-		m_imageMemory = imageMemory;
-	}
+	m_imageMemory = m_device->getLogicalDevice().allocateMemory(allocInfo);
 	m_device->getLogicalDevice().bindImageMemory(m_image, m_imageMemory, 0);
 
 	// Changing layout to once we need
@@ -124,10 +115,7 @@ void VulkanTexture::createVulkanResources()
 		.setFormat(vkFormat)
 		.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-	{
-		auto [res, imageView] = m_device->getLogicalDevice().createImageView(viewInfo);
-		m_imageView = imageView;
-	}
+	m_imageView = m_device->getLogicalDevice().createImageView(viewInfo);
 
 	// Cleaning pixel data
 	m_pixelData.clear();

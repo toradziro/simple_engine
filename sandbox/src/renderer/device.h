@@ -1,8 +1,5 @@
 #pragma once
 
-#define VULKAN_HPP_NO_EXCEPTIONS
-#define VULKAN_HPP_ASSERT_ON_RESULT
-
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
@@ -175,6 +172,8 @@ public:
 
 	void	cleanupSwapchain();
 
+	void	setMaxTextures(uint32_t maxPossibleTextures) { m_maxTextures = maxPossibleTextures; }
+
 private:
 	const std::vector<const char*> C_DEVICE_EXTENTIONS
 	{
@@ -222,6 +221,7 @@ private:
 
 	uint32_t						m_currFrame = 0;
 	uint32_t						m_currImageIndex = 0;
+	uint32_t						m_maxTextures = 200;
 
 	bool							m_framebufferResized = false;
 #ifdef NDEBUG
