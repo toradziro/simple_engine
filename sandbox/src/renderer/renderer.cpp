@@ -20,28 +20,20 @@ Renderer::Renderer(GLFWwindow* window)
 
 Renderer::~Renderer()
 {
-	try
+	m_device.waitGraphicIdle();
+	for (auto& buff : m_vertexBuffersToFrames)
 	{
-		m_device.waitGraphicIdle();
-		for (auto& buff : m_vertexBuffersToFrames)
+		if (buff.m_Buffer != VK_NULL_HANDLE)
 		{
-			if (buff.m_Buffer != VK_NULL_HANDLE)
-			{
-				m_device.clearBuffer(buff);
-			}
-		}
-		for (auto& buff : m_indexBuffersToFrames)
-		{
-			if (buff.m_Buffer != VK_NULL_HANDLE)
-			{
-				m_device.clearBuffer(buff);
-			}
+			m_device.clearBuffer(buff);
 		}
 	}
-	catch (const std::exception& e)
+	for (auto& buff : m_indexBuffersToFrames)
 	{
-		std::cout << "Error during deinitialization: " << e.what() << std::endl;
-		throw;
+		if (buff.m_Buffer != VK_NULL_HANDLE)
+		{
+			m_device.clearBuffer(buff);
+		}
 	}
 }
 
