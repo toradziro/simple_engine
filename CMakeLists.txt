@@ -31,18 +31,18 @@ else()
 endif()
 
 # Set includes
-set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW/include")
-set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/glm")
+set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/GLFW/include")
+set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/glm")
 set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
-set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc/libshaderc/include")
-set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/stb")
+set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/shaderc/libshaderc/include")
+set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/stb")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/GLFW" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/GLFW" EXCLUDE_FROM_ALL)
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/vendor/shaderc" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/shaderc" EXCLUDE_FROM_ALL)
 
 # Main project
 add_executable(sandbox)
