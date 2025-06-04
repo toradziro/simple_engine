@@ -1,0 +1,3 @@
+[submodule "sandbox/vendor/GLFW"]
+	path = sandbox/vendor/GLFW
+	url = https://github.com/toradziro/glfw
