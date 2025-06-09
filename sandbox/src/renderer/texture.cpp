@@ -63,7 +63,7 @@ void VulkanTexture::createVulkanResources()
 
 	// Copy data to staging buffer
 	void* data;
-	m_device->getLogicalDevice().mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
+	[[maybe_unused]]auto res = m_device->getLogicalDevice().mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
 	memcpy(data, m_pixelData.data(), imageSize);
 	m_device->getLogicalDevice().unmapMemory(stagingBufferMemory);
 
