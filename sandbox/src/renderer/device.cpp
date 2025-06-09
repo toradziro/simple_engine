@@ -268,13 +268,20 @@ void VkGraphicDevice::updateUniformBuffer()
 {
 	int w = 0, h = 0;
 	glfwGetFramebufferSize(m_window, &w, &h);
+	if (w == 0)
+	{
+		w = 1;
+	}
+	if (h == 0)
+	{
+		h = 1;
+	}
 
 	UniformBufferObject ubo = {};
 	ubo.m_model = glm::mat4(1.0f);
 	ubo.m_view = glm::lookAt(glm::vec3(0.0f, 0.0f, 2.0f)
 		, glm::vec3(0.0f, 0.0f, 0.0f)
 		, glm::vec3(0.0f, 1.0f, 0.0f));
-
 	ubo.m_proj = glm::perspective(glm::radians(45.0f), (float)w / (float)h, 0.1f, 10.0f);
 	ubo.m_proj[1][1] *= -1;
 	memcpy(m_uniformBuffersMapped[m_currFrame], &ubo, sizeof(UniformBufferObject));

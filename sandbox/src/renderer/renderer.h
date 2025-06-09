@@ -33,6 +33,23 @@ private:
 	VkGraphicDevice&	m_graphicDevice;
 };
 
+class BatchDrawer
+{
+public:
+	BatchDrawer(VkGraphicDevice& graphicDevice);
+	~BatchDrawer();
+
+	void	draw(const std::vector<TexuredSpriteBatch>& spriteBatches);
+
+private:
+	void	clearBuffers(uint8_t frameIndex);
+
+	VkGraphicDevice&					m_graphicDevice;
+	//-- Transformed to device notation data
+	std::vector<TexturedGeometryBatch>	m_vertexBuffersToFrames;
+	std::vector<BatchIndecies>			m_indexBuffersToFrames;
+};
+
 class Renderer
 {
 public:
@@ -46,19 +63,15 @@ public:
 
 private:
 	void batchSprites();
-	void clearBuffers(uint8_t frameIndex);
 
 private:
 	VkGraphicDevice						m_device;
 
 	std::unique_ptr<TextureCache>		m_texureCache;
+	std::unique_ptr<BatchDrawer>		m_batchDrawer;
 
 	//-- User notation object
 	std::vector<SpriteInfo>				m_sprites;
 	//-- Transfromed to batches user's data
 	std::vector<TexuredSpriteBatch>		m_batchedByTextureSprites;
-
-	//-- Transformed to device notation data
-	std::vector<TexturedGeometryBatch>	m_vertexBuffersToFrames;
-	std::vector<BatchIndecies>			m_indexBuffersToFrames;
 };
