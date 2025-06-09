@@ -69,7 +69,7 @@ int main(int argc, char** argv)
 	};
 
 	const SpriteInfo firstSprite = { firstQuad, "images/nyan_cat.png" };
-	const SpriteInfo secondSprite = { secondQuad, "images/e_v.png" };
+	const SpriteInfo secondSprite = { secondQuad, "images/gg2.png" };
 
 	while (!data.m_shouldClouseWindow)
 	{
