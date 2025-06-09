@@ -70,9 +70,19 @@ struct UniformBufferObject
 
 struct VulkanBufferMemory
 {
-	vk::Buffer						m_Buffer;
-	vk::DeviceMemory				m_BufferMem;
+	vk::Buffer			m_buffer;
+	vk::DeviceMemory	m_bufferMem;
 };
+
+struct TexturedGeometry
+{
+	VulkanBufferMemory	m_memory;
+	VulkanTexture*		m_texture;
+	uint32_t			m_spritesCount;
+};
+
+using TexturedGeometryBatch = std::vector<TexturedGeometry>;
+using BatchIndecies = std::vector<VulkanBufferMemory>;
 
 class VkGraphicDevice
 {
@@ -87,7 +97,7 @@ public:
 	}
 
 	void	beginFrame(float /*dt*/);
-	void	endFrame(const VulkanBufferMemory& vertices, const VulkanBufferMemory& indexBuffer, uint16_t spriteCount);
+	void	endFrame(const TexturedGeometryBatch& geometryBatch, const BatchIndecies& indicesBatch);
 
 	auto	createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory;
 	void	clearBuffer(VulkanBufferMemory memory);
@@ -131,9 +141,8 @@ public:
 
 	void	recordCommandBuffer(vk::CommandBuffer commandBuffer
 		, uint32_t imageIndex
-		, const VulkanBufferMemory& vertices
-		, const VulkanBufferMemory& indexBuffer,
-		uint16_t spriteCount);
+		, const TexturedGeometryBatch& geometryBatch
+		, const BatchIndecies& indicesBatch);
 
 	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;

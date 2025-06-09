@@ -214,13 +214,12 @@ void VkGraphicDevice::beginFrame(float /*dt*/)
 	m_commandBuffers[m_currFrame].reset();
 }
 
-void VkGraphicDevice::endFrame(const VulkanBufferMemory& vertices, const VulkanBufferMemory& indexBuffer, uint16_t spriteCount)
+void VkGraphicDevice::endFrame(const TexturedGeometryBatch& geometryBatch, const BatchIndecies& indicesBatch)
 {
 	recordCommandBuffer(m_commandBuffers[m_currFrame]
 		, m_currImageIndex
-		, vertices
-		, indexBuffer
-		, spriteCount);
+		, geometryBatch
+		, indicesBatch);
 	updateUniformBuffer();
 
 	//-- Submitting command buffer
@@ -825,10 +824,10 @@ VulkanBufferMemory VkGraphicDevice::createCombinedVertexBuffer(
 	createBuffer(bufferSize,
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		resultMemory.m_Buffer,
-		resultMemory.m_BufferMem);
+		resultMemory.m_buffer,
+		resultMemory.m_bufferMem);
 
-	copyBuffer(stagingBuffer, resultMemory.m_Buffer, bufferSize);
+	copyBuffer(stagingBuffer, resultMemory.m_buffer, bufferSize);
 
 	m_logicalDevice.destroyBuffer(stagingBuffer);
 	m_logicalDevice.freeMemory(stagingBufferMemory);
@@ -895,10 +894,10 @@ auto VkGraphicDevice::createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMem
 	createBuffer(bufferSize,
 		vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
 		vk::MemoryPropertyFlagBits::eDeviceLocal,
-		resultMemory.m_Buffer,
-		resultMemory.m_BufferMem);
+		resultMemory.m_buffer,
+		resultMemory.m_bufferMem);
 
-	copyBuffer(stagingBuffer, resultMemory.m_Buffer, bufferSize);
+	copyBuffer(stagingBuffer, resultMemory.m_buffer, bufferSize);
 	m_logicalDevice.destroyBuffer(stagingBuffer);
 	m_logicalDevice.freeMemory(stagingBufferMemory);
 
@@ -931,8 +930,8 @@ void VkGraphicDevice::createUniformBuffers()
 
 void VkGraphicDevice::clearBuffer(VulkanBufferMemory memory)
 {
-	m_logicalDevice.destroyBuffer(memory.m_Buffer);
-	m_logicalDevice.freeMemory(memory.m_BufferMem);
+	m_logicalDevice.destroyBuffer(memory.m_buffer);
+	m_logicalDevice.freeMemory(memory.m_bufferMem);
 }
 
 void VkGraphicDevice::createDescriptorPool()
@@ -1073,9 +1072,8 @@ void VkGraphicDevice::setupPhysicalDevice()
 
 void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 	, uint32_t imageIndex
-	, const VulkanBufferMemory& vertices
-	, const VulkanBufferMemory& indexBuffer
-	, uint16_t spriteCount)
+	, const TexturedGeometryBatch& geometryBatch
+	, const BatchIndecies& indicesBatch)
 {
 	vk::CommandBufferBeginInfo cmdBBeginfo = {};
 	commandBuffer.begin(cmdBBeginfo);
@@ -1093,9 +1091,6 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 	commandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 	commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_graphicsPipeline);
 
-	commandBuffer.bindVertexBuffers(0, vertices.m_Buffer, { 0 });
-	commandBuffer.bindIndexBuffer(indexBuffer.m_Buffer, 0, vk::IndexType::eUint16);
-
 	vk::Viewport viewport = {};
 	viewport.setX(0.0f).setY(0.0f)
 		.setWidth(m_imageExtent.width)
@@ -1107,14 +1102,20 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 	vk::Rect2D scissor = {};
 	scissor.setExtent(m_imageExtent).setOffset({ 0, 0 });
 	commandBuffer.setScissor(0, scissor);
+	
+	for (uint32_t i = 0; i < geometryBatch.size(); ++i)
+	{
+		commandBuffer.bindVertexBuffers(0, geometryBatch[i].m_memory.m_buffer, {0});
+		commandBuffer.bindIndexBuffer(indicesBatch[i].m_buffer, 0, vk::IndexType::eUint16);
 
-	commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-		m_pipelineLayout,
-		0,
-		{ m_descriptorSets[m_currFrame], m_texture->getDescriptorSet()},
-		{});
+		commandBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
+			m_pipelineLayout,
+			0,
+			{ m_descriptorSets[m_currFrame], geometryBatch[i].m_texture->getDescriptorSet()},
+			{});
 
-	commandBuffer.drawIndexed(spriteCount * 6, 1, 0, 0, 0);
+		commandBuffer.drawIndexed(geometryBatch[i].m_spritesCount * 6, 1, 0, 0, 0);
+	}
 	commandBuffer.endRenderPass();
 	commandBuffer.end();
 }

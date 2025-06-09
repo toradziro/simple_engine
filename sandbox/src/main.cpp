@@ -40,7 +40,11 @@ int main(int argc, char** argv)
 
 	Renderer renderer(win);
 	int txtId = 0;
-	renderer.setTexture("images/nyan_cat.png");
+	//-- renderer.setTexture("images/nyan_cat.png");
+	//-- renderer.setTexture("images/gg2.png");
+	//-- renderer.setTexture("images/nyan_cat.png");
+	//-- renderer.setTexture("images/e_v.png");
+
 
 	glfwSetKeyCallback(win, [](GLFWwindow* window, int key, int scancode, int action, int mods)
 		{
@@ -64,6 +68,9 @@ int main(int argc, char** argv)
 		VertexData{{0.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
 	};
 
+	const SpriteInfo firstSprite = { firstQuad, "images/nyan_cat.png" };
+	const SpriteInfo secondSprite = { secondQuad, "images/e_v.png" };
+
 	while (!data.m_shouldClouseWindow)
 	{
 		glfwPollEvents();
@@ -74,24 +81,12 @@ int main(int argc, char** argv)
 		}
 		if (data.m_buttomUpPressed)
 		{
-			if (!(txtId % 3))
-			{
-				renderer.setTexture("images/gg2.png");
-			}
-			else if (!(txtId % 2))
-			{
-				renderer.setTexture("images/nyan_cat.png");
-			}
-			else
-			{
-				renderer.setTexture("images/e_v.png");
-			}
 			txtId++;
 			data.m_buttomUpPressed = false;
 		}
 		renderer.beginFrame(0.0f);
-		renderer.drawSprite({ firstQuad });
-		renderer.drawSprite({ secondQuad });
+		renderer.drawSprite(firstSprite);
+		renderer.drawSprite(secondSprite);
 		//-- drawSprite will got here
 		renderer.endFrame();
 	}
