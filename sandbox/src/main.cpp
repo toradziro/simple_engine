@@ -10,8 +10,6 @@
 
 int main(int argc, char** argv)
 {
-	//checkLibs();
-
 	auto res = glfwInit();
 	assert(res);
 
@@ -39,12 +37,6 @@ int main(int argc, char** argv)
 		});
 
 	Renderer renderer(win);
-	int txtId = 0;
-	//-- renderer.setTexture("images/nyan_cat.png");
-	//-- renderer.setTexture("images/gg2.png");
-	//-- renderer.setTexture("images/nyan_cat.png");
-	//-- renderer.setTexture("images/e_v.png");
-
 
 	glfwSetKeyCallback(win, [](GLFWwindow* window, int key, int scancode, int action, int mods)
 		{
@@ -81,7 +73,6 @@ int main(int argc, char** argv)
 		}
 		if (data.m_buttomUpPressed)
 		{
-			txtId++;
 			data.m_buttomUpPressed = false;
 		}
 		renderer.beginFrame(0.0f);

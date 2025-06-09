@@ -242,15 +242,23 @@ void VkGraphicDevice::endFrame(const TexturedGeometryBatch& geometryBatch, const
 		.setSwapchains(m_swapchain)
 		.setImageIndices(m_currImageIndex);
 
-	auto resPresent = m_queues.m_presentationQueue.presentKHR(presentInfo);
-	if (resPresent == vk::Result::eErrorOutOfDateKHR || m_framebufferResized)
+	try
 	{
-		m_framebufferResized = false;
-		recreateSwapChain();
+		[[maybe_unused]] auto result = m_queues.m_presentationQueue.presentKHR(presentInfo);
+		if (result == vk::Result::eSuboptimalKHR)
+		{
+			recreateSwapChain();
+			m_framebufferResized = false;
+		}
 	}
-	else if (resPresent != vk::Result::eSuccess && resPresent != vk::Result::eSuboptimalKHR)
+	catch (const vk::OutOfDateKHRError&)
 	{
-		throw std::runtime_error("failed to present swap chain image!");
+		recreateSwapChain();
+		m_framebufferResized = false;
+	}
+	catch (const vk::SystemError& e)
+	{
+		throw std::runtime_error(std::format("Failed to present swap chain image: {}", e.what()));
 	}
 
 	m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
