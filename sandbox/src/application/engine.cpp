@@ -2,19 +2,29 @@
 
 #include <iostream>
 #include <format>
-
-struct TstSystem
-{
-	int i;
-};
+#include <application/system/window_system.h>
 
 Engine::Engine()
 {
-	TstSystem tst = { 24 };
-	m_systemHolder.addSystem(std::move(tst));
+	WindowInfo winInfo = {
+		.m_windowName = "Simple",
+		.m_width = 1200,
+		.m_height = 800
+	};
+	m_systemHolder.addSystem<WindowSystem>(std::move(winInfo));
 }
 
 Engine::~Engine()
 {
-	std::cout << std::format("TST SYSTEM VALUE:  {}", m_systemHolder.getSystem<TstSystem>().i) << std::endl;
+}
+
+void Engine::run()
+{
+	while (true)
+	{
+		for (auto& [name, system] : m_systemHolder)
+		{
+			system.update(0.0f);
+		}
+	}
 }
