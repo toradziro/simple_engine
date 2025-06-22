@@ -27,6 +27,8 @@ public:
 	void	init();
 	void	shutdown();
 
+	GLFWwindow* getWindow() { return m_window; }
+
 private:
 	WindowInfo	m_info;
 	GLFWwindow* m_window = nullptr;
