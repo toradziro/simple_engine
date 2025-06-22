@@ -25,6 +25,12 @@ Renderer::~Renderer()
 	m_batchDrawer.reset();
 }
 
+void Renderer::update(float dt)
+{
+	beginFrame(dt);
+	endFrame();
+}
+
 void Renderer::beginFrame(float dt)
 {
 	try

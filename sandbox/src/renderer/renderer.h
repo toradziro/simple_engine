@@ -57,7 +57,7 @@ public:
 	Renderer(Renderer&& renderer) = default;
 	~Renderer();
 
-	void update(float dt) {}
+	void update(float dt);
 	void beginFrame(float dt);
 	void endFrame();
 	void drawSprite(const SpriteInfo& spriteInfo);

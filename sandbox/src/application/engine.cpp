@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <format>
+#include <chrono>
+#include <ctime>
 #include <application/system/window_system.h>
 
 Engine::Engine()
@@ -38,19 +40,22 @@ Engine::~Engine()
 
 void Engine::run()
 {
+	float lastFrameDt = 0.0f;
 	while (true)
 	{
+		auto t_start = std::chrono::high_resolution_clock::now();
+		auto& rendererSystem = m_systemHolder.getSystem<Renderer>();
+		
+		//-- Tst drawind here
+		rendererSystem.drawSprite(m_firstSprite);
+		rendererSystem.drawSprite(m_secondSprite);
+		
 		for (auto& [name, system] : m_systemHolder)
 		{
-			system.update(0.0f);
-
-			//-- TEST, INCAPSULATE LATER!!!
-			auto& rendererSystem = m_systemHolder.getSystem<Renderer>();
-			rendererSystem.beginFrame(0.0f);
-			rendererSystem.drawSprite(m_firstSprite);
-			rendererSystem.drawSprite(m_secondSprite);
-			//-- drawSprite will got here
-			rendererSystem.endFrame();
+			system.update(lastFrameDt);
 		}
+		const auto t_end = std::chrono::high_resolution_clock::now();
+		lastFrameDt = std::chrono::duration<float>(t_end - t_start).count();
+		std::cout << lastFrameDt << std::endl;
 	}
 }
