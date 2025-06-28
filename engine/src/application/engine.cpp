@@ -4,7 +4,9 @@
 #include <format>
 #include <chrono>
 #include <ctime>
+#include <application/managers/window_manager.h>
 #include <application/system/window_system.h>
+#include <renderer/renderer.h>
 
 Engine::Engine()
 {
@@ -13,8 +15,14 @@ Engine::Engine()
 		.m_width = 1200,
 		.m_height = 800
 	};
-	m_systemHolder.addSystem<WindowSystem>(std::move(winInfo));
-	m_systemHolder.addSystem<Renderer>(m_systemHolder.getSystem<WindowSystem>().getWindow());
+
+	//-- Create managers, be aware that managers may be initialized inside corresponding systems
+	m_context.m_managerHolder.addManager<WindowManager>();
+	m_context.m_managerHolder.addManager<RendererManager>();
+
+	//-- Create systems
+	m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));
+	m_systemHolder.addSystem<RendererSystem>(m_context);
 
 	//-- Test sprites
 	const std::array<VertexData, 4> firstQuad = {
@@ -44,18 +52,18 @@ void Engine::run()
 	while (true)
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
-		auto& rendererSystem = m_systemHolder.getSystem<Renderer>();
+		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
 		
 		//-- Tst drawind here
-		rendererSystem.drawSprite(m_firstSprite);
-		rendererSystem.drawSprite(m_secondSprite);
+		rendererManager.addSpriteToDrawList(m_firstSprite);
+		rendererManager.addSpriteToDrawList(m_secondSprite);
 		
 		for (auto& [name, system] : m_systemHolder)
 		{
 			system.update(lastFrameDt);
 		}
+
 		const auto t_end = std::chrono::high_resolution_clock::now();
 		lastFrameDt = std::chrono::duration<float>(t_end - t_start).count();
-		std::cout << lastFrameDt << std::endl;
 	}
 }

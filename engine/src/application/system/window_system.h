@@ -3,6 +3,8 @@
 #include <application/core/system_interface.h>
 #include <GLFW/glfw3.h>
 
+struct EngineContext;
+
 struct EventsHandler
 {
 
@@ -19,17 +21,12 @@ struct WindowInfo
 class WindowSystem
 {
 public:
-	WindowSystem(WindowInfo&& info);
-	WindowSystem(WindowSystem&& winSystem);
-	~WindowSystem();
+	WindowSystem(EngineContext& context, WindowInfo&& info) noexcept;
+	~WindowSystem() noexcept;
 
 	void	update(float dt);
-	void	init();
-	void	shutdown();
-
-	GLFWwindow* getWindow() { return m_window; }
 
 private:
-	WindowInfo	m_info;
-	GLFWwindow* m_window = nullptr;
+	EngineContext&	m_context;
+	WindowInfo		m_info;
 };

@@ -1,14 +1,20 @@
 #include "renderer.h"
+
+#include <application/engine.h>
+#include <application/managers/window_manager.h>
+
+
 #include <filesystem>
 #include <iostream>
 #include <algorithm>
 #include <ranges>
 
-Renderer::Renderer(GLFWwindow* window)
+RendererSystem::RendererSystem(EngineContext& context)
+	: m_engineContext(context)
 {
 	try
 	{
-		m_device.init(window);
+		m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
 		m_texureCache = std::make_unique<TextureCache>(m_device);
 		m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
 	}
@@ -19,19 +25,19 @@ Renderer::Renderer(GLFWwindow* window)
 	}
 }
 
-Renderer::~Renderer()
+RendererSystem::~RendererSystem()
 {
 	m_device.waitGraphicIdle();
 	m_batchDrawer.reset();
 }
 
-void Renderer::update(float dt)
+void RendererSystem::update(float dt)
 {
 	beginFrame(dt);
 	endFrame();
 }
 
-void Renderer::beginFrame(float dt)
+void RendererSystem::beginFrame(float dt)
 {
 	try
 	{
@@ -44,7 +50,7 @@ void Renderer::beginFrame(float dt)
 	}
 }
 
-void Renderer::endFrame()
+void RendererSystem::endFrame()
 {
 	try
 	{
@@ -56,7 +62,8 @@ void Renderer::endFrame()
 
 		//-- Clear collections, for now rendering has no any caches
 		m_batchedByTextureSprites.clear();
-		m_sprites.clear();
+
+		m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites.clear();
 	}
 	catch (const std::exception& e)
 	{
@@ -65,26 +72,16 @@ void Renderer::endFrame()
 	}
 }
 
-void Renderer::drawSprite(const SpriteInfo& spriteInfo)
+void RendererSystem::batchSprites()
 {
-	m_sprites.push_back(spriteInfo);
-}
-
-void Renderer::batchSprites()
-{
-	if (m_sprites.empty())
+	auto& sprites = m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites;
+	if (sprites.empty())
 	{
 		return;
 	}
 
-	//-- Sort by texture path
-	std::ranges::sort(m_sprites, [](const auto& lhs, const auto& rhs)
-		{
-			return lhs.m_texturePath < rhs.m_texturePath;
-		});
-
 	//-- Group by textures
-	auto batches = m_sprites | std::views::chunk_by([](const auto& lhs, const auto& rhs)
+	auto batches = sprites | std::views::chunk_by([](const auto& lhs, const auto& rhs)
 		{
 			return lhs.m_texturePath == rhs.m_texturePath;
 		});
@@ -175,6 +172,7 @@ void BatchDrawer::clearBuffers(uint8_t frameIndex)
 {
 	auto& currentTexturedGeometryBatch = m_vertexBuffersToFrames[frameIndex];
 	auto& currentIndexBatch = m_indexBuffersToFrames[frameIndex];
+
 	for (auto& batch : currentTexturedGeometryBatch)
 	{
 		if (batch.m_memory.m_buffer != VK_NULL_HANDLE)

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <memory>
 #include <vector>
 #include <string>
@@ -58,13 +59,6 @@ public:
 	{
 	}
 
-	template <typename T>
-	T& getUnderlyingSystem()
-	{
-		auto systemObject = static_cast<SystemObject<T>*>(m_systemObject.get());
-		return systemObject->m_system;
-	}
-
 	void update(float dt)
 	{
 		m_systemObject->update(dt);
@@ -93,23 +87,6 @@ struct SystemHolder
 			systemId<SystemType>(),
 			System{ std::in_place_type<SystemType>, std::forward<Args>(args)... }
 		);
-	}
-
-	template<typename T>
-	T& getSystem()
-	{
-		auto systemIdStr = systemId<T>();
-		auto it = std::ranges::find_if(m_systems, [&systemIdStr](const auto& system)
-			{
-				return system.first == systemIdStr;
-			});
-
-		if (it == m_systems.end())
-		{
-			assert(false);
-		}
-
-		return it->second.getUnderlyingSystem<T>();
 	}
 
 	auto begin()

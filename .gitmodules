@@ -1,3 +1,3 @@
-[submodule "sandbox/third_parties/GLFW"]
-	path = sandbox/third_parties/GLFW
-	url = https://github.com/toradziro/glfw
+[submodule "engine/third_parties/GLFW"]
+	path = engine/third_parties/GLFW
+	url = https://github.com/glfw/glfw.git

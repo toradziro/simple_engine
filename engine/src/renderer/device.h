@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 
 #include "texture.h"
+#include <application/managers/renderer_manager.h>
 
 struct QueueFamilies
 {
@@ -23,13 +24,6 @@ struct QueueFamilies
 		return m_graphicQueue >= 0
 			&& m_presentationQueue >= 0;
 	}
-};
-
-struct VertexData
-{
-	glm::vec2	m_vertex;
-	glm::vec3	m_color;
-	glm::vec2	m_texCoord;
 };
 
 struct Queues

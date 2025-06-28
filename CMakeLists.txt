@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(sandbox LANGUAGES CXX)
+project(engine LANGUAGES CXX)
 
 # Set standard C++23
 set(CMAKE_CXX_STANDARD 23)
@@ -31,25 +31,25 @@ else()
 endif()
 
 # Set includes
-set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/GLFW/include")
-set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/glm")
+set(GLFW_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/GLFW/include")
+set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/glm")
 set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
-set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/shaderc/libshaderc/include")
-set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/stb")
+set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc/libshaderc/include")
+set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/stb")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/GLFW" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/GLFW" EXCLUDE_FROM_ALL)
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/sandbox/third_parties/shaderc" EXCLUDE_FROM_ALL)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc" EXCLUDE_FROM_ALL)
 
 # Main project
-add_executable(sandbox)
+add_executable(engine)
 
 # Find source files
-file(GLOB_RECURSE SANDBOX_SOURCES "sandbox/src/**.cpp")
-file(GLOB_RECURSE SANDBOX_HEADERS "sandbox/src/**.h")
+file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
+file(GLOB_RECURSE engine_HEADERS "engine/src/**.h")
 
 # File structure setup for Visual Studio
 # Function to set file structure as on disk
@@ -67,14 +67,14 @@ function(assign_source_group)
 endfunction(assign_source_group)
 
 # Apply function to our files
-assign_source_group(${SANDBOX_SOURCES} ${SANDBOX_HEADERS})
+assign_source_group(${engine_SOURCES} ${engine_HEADERS})
 
 # Source files
-target_sources(sandbox PRIVATE ${SANDBOX_SOURCES} ${SANDBOX_HEADERS})
+target_sources(engine PRIVATE ${engine_SOURCES} ${engine_HEADERS})
 
 # Include files
-target_include_directories(sandbox PRIVATE 
-    "sandbox/src"
+target_include_directories(engine PRIVATE 
+    "engine/src"
     ${GLFW_INCLUDE_DIR}
     ${GLM_INCLUDE_DIR}
     ${VULKAN_INCLUDE_DIR}
@@ -84,24 +84,24 @@ target_include_directories(sandbox PRIVATE
 
 # Vulkan path
 set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
-target_link_directories(sandbox PRIVATE ${VULKAN_LIB_DIR})
+target_link_directories(engine PRIVATE ${VULKAN_LIB_DIR})
 
 # Add libs
-target_link_libraries(sandbox PRIVATE glfw vulkan-1 shaderc)
+target_link_libraries(engine PRIVATE glfw vulkan-1 shaderc)
 
 # Win defines
 if(WIN32)
-    target_compile_definitions(sandbox PRIVATE _CRT_SECURE_NO_WARNINGS)
+    target_compile_definitions(engine PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Lib config
-set_target_properties(sandbox PROPERTIES 
+set_target_properties(engine PROPERTIES 
     RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
     RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release"
 )
 
 # Debug config
-target_compile_options(sandbox PRIVATE 
+target_compile_options(engine PRIVATE 
     $<$<CONFIG:Debug>:
         $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MDd>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O0>
@@ -109,7 +109,7 @@ target_compile_options(sandbox PRIVATE
 )
 
 # Release config
-target_compile_options(sandbox PRIVATE 
+target_compile_options(engine PRIVATE 
     $<$<CONFIG:Release>:
         $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MD>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O2>
@@ -118,5 +118,5 @@ target_compile_options(sandbox PRIVATE
 
 # Set starting project
 if(MSVC)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT sandbox)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT engine)
 endif()

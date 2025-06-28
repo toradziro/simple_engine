@@ -4,11 +4,9 @@
 #include <unordered_map>
 #include <memory>
 
-struct SpriteInfo
-{
-	std::array<VertexData, 4>	m_verticies;
-	std::string					m_texturePath;
-};
+#include <application/managers/renderer_manager.h>
+
+struct EngineContext;
 
 struct TexuredSpriteBatch
 {
@@ -50,30 +48,28 @@ private:
 	std::vector<BatchIndecies>			m_indexBuffersToFrames;
 };
 
-class Renderer
+class RendererSystem
 {
 public:
-	Renderer(GLFWwindow* window);
-	Renderer(Renderer&& renderer) = default;
-	~Renderer();
+	RendererSystem(EngineContext& context);
+	~RendererSystem();
 
 	void update(float dt);
 	void beginFrame(float dt);
 	void endFrame();
-	void drawSprite(const SpriteInfo& spriteInfo);
 	void resizedWindow() { m_device.resizedWindow(); }
 
 private:
 	void batchSprites();
 
 private:
+	EngineContext&						m_engineContext;
+
 	VkGraphicDevice						m_device;
 
 	std::unique_ptr<TextureCache>		m_texureCache;
 	std::unique_ptr<BatchDrawer>		m_batchDrawer;
 
-	//-- User notation object
-	std::vector<SpriteInfo>				m_sprites;
 	//-- Transfromed to batches user's data
 	std::vector<TexuredSpriteBatch>		m_batchedByTextureSprites;
 };
