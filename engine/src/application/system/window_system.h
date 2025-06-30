@@ -5,14 +5,8 @@
 
 struct EngineContext;
 
-struct EventsHandler
-{
-
-};
-
 struct WindowInfo
 {
-	EventsHandler	m_handler;
 	std::string		m_windowName;
 	int				m_width;
 	int				m_height;

@@ -1,6 +1,7 @@
 #include "window_system.h"
 #include <application/engine.h>
 #include <application/managers/window_manager.h>
+#include <application/managers/events/events_manager.h>
 
 //-- include events header
 
@@ -53,5 +54,6 @@ WindowSystem::~WindowSystem() noexcept
 
 void WindowSystem::update(float dt)
 {
+	m_context.m_managerHolder.getManager<EventsManager>().clear();
 	glfwPollEvents();
 }

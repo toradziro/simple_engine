@@ -11,8 +11,7 @@
 template<typename Manager>
 std::string managerId()
 {
-	const auto typeName = typeid(Manager).name();
-	return typeName;
+	return typeid(Manager).name();
 }
 
 class Manager
@@ -83,17 +82,9 @@ struct ManagerHolder
 	T& getManager()
 	{
 		auto managerIdStr = managerId<T>();
-		auto it = std::ranges::find_if(m_managers, [&managerIdStr](const auto& manager)
-			{
-				return manager.first == managerIdStr;
-			});
-
-		if (it == m_managers.end())
-		{
-			assert(false);
-		}
-
-		return it->second.getUnderlyingManager<T>();
+		
+		assert(m_managers.count(managerIdStr));
+		return m_managers[managerIdStr].getUnderlyingManager<T>();
 	}
 
 private:

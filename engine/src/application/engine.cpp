@@ -43,13 +43,14 @@ Engine::Engine()
 }
 
 Engine::~Engine()
-{
-}
+{}
 
 void Engine::run()
 {
 	float lastFrameDt = 0.0f;
-	while (true)
+	auto& eventManager = m_context.m_managerHolder.getManager<EventsManager>();
+
+	while (!eventManager.hasEvent<WindowCloseEvent>())
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
