@@ -6,14 +6,24 @@
 #include <ctime>
 #include <application/managers/window_manager.h>
 #include <application/system/window_system.h>
+#include <application/managers/events/events_types.h>
 #include <renderer/renderer.h>
+
+static bool running = true;
 
 Engine::Engine()
 {
 	WindowInfo winInfo = {
 		.m_windowName = "Simple",
 		.m_width = 1200,
-		.m_height = 800
+		.m_height = 800,
+		.m_eventCallback = [&](Event& event)
+			{
+				if (event.eventId() == eventId<WindowCloseEvent>())
+				{
+					running = false;
+				}
+			}
 	};
 
 	//-- Create managers, be aware that managers may be initialized inside corresponding systems
@@ -48,9 +58,8 @@ Engine::~Engine()
 void Engine::run()
 {
 	float lastFrameDt = 0.0f;
-	auto& eventManager = m_context.m_managerHolder.getManager<EventsManager>();
 
-	while (!eventManager.hasEvent<WindowCloseEvent>())
+	while (running)
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();

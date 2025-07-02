@@ -1,9 +1,8 @@
 #include "window_system.h"
 #include <application/engine.h>
 #include <application/managers/window_manager.h>
-#include <application/managers/events/events_manager.h>
+#include <application/managers/events/events_types.h>
 
-//-- include events header
 
 WindowSystem::WindowSystem(EngineContext& context, WindowInfo&& info) noexcept
 	: m_context(context)
@@ -21,20 +20,25 @@ WindowSystem::WindowSystem(EngineContext& context, WindowInfo&& info) noexcept
 		, nullptr
 		, nullptr);
 
-	glfwSetWindowUserPointer(winManager.m_window, &m_info.m_handler);
+	glfwSetWindowUserPointer(winManager.m_window, &m_info);
 
 	glfwSetWindowCloseCallback(winManager.m_window, [](GLFWwindow* win)
 		{
-			EventsHandler* eventHandler = (EventsHandler*)glfwGetWindowUserPointer(win);
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(win);
+			WindowCloseEvent event;
+			Event wrappedEvent(std::move(event));
+			winInfo->m_eventCallback(wrappedEvent);
 		});
 
 	glfwSetFramebufferSizeCallback(winManager.m_window, [](GLFWwindow* window, int width, int height)
 		{
-			EventsHandler* eventHandler = (EventsHandler*)glfwGetWindowUserPointer(window);
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
 		});
 
 	glfwSetKeyCallback(winManager.m_window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
 		{
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+
 			if (key == GLFW_KEY_UP && action == GLFW_PRESS)
 			{
 			}
@@ -54,6 +58,5 @@ WindowSystem::~WindowSystem() noexcept
 
 void WindowSystem::update(float dt)
 {
-	m_context.m_managerHolder.getManager<EventsManager>().clear();
 	glfwPollEvents();
 }

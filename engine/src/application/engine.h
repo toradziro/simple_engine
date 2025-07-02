@@ -19,8 +19,8 @@ public:
 	void	run();
 
 private:
-	SystemHolder	m_systemHolder;
 	EngineContext	m_context;
+	SystemHolder	m_systemHolder;
 
 	//-- test
 	SpriteInfo		m_firstSprite;

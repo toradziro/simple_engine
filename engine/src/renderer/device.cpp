@@ -12,6 +12,7 @@
 #include <fstream>
 #include <shaderc/shaderc.hpp>
 #include <cstdlib>
+#include <print>
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_RADIANS
@@ -107,39 +108,39 @@ void VkGraphicDevice::init(GLFWwindow* window)
 		createVkInstance();
 		//-- Create surface earlier than other devices types since we need it
 		//-- in checking queue that can support presentation operations
-		std::cout << "createSurface" << std::endl;
+		std::println("createSurface");
 		createSurface();
-		std::cout << "setupPhysicalDevice" << std::endl;
+		std::println("setupPhysicalDevice");
 		setupPhysicalDevice();
-		std::cout << "createLogicalDevice" << std::endl;
+		std::println("createLogicalDevice");
 		createLogicalDevice();
-		std::cout << "createSwapchain" << std::endl;
+		std::println("createSwapchain");
 		createSwapchain();
-		std::cout << "createShaderModule" << std::endl;
+		std::println("createShaderModule");
 		createShaderModule();
-		std::cout << "createRenderPass" << std::endl;
+		std::println("createRenderPass");
 		createRenderPass();
-		std::cout << "createDescriptorSetLayout" << std::endl;
+		std::println("createDescriptorSetLayout");
 		createDescriptorSetLayout();
-		std::cout << "createPipeline" << std::endl;
+		std::println("createPipeline");
 		createPipeline();
-		std::cout << "createFramebuffer" << std::endl;
+		std::println("createFramebuffer");
 		createFramebuffer();
-		std::cout << "createCommandPool" << std::endl;
+		std::println("createCommandPool");
 		createCommandPool();
-		std::cout << "createTextureSampler" << std::endl;
+		std::println("createTextureSampler");
 		createTextureSampler();
-		std::cout << "createUniformBuffers" << std::endl;
+		std::println("createUniformBuffers");
 		createUniformBuffers();
-		std::cout << "createDescriptorPool" << std::endl;
+		std::println("createDescriptorPool");
 		createDescriptorPool();
-		std::cout << "createDescriptorSets" << std::endl;
+		std::println("createDescriptorSets");
 		createDescriptorsSets();
-		std::cout << "createCommandBuffer" << std::endl;
+		std::println("createCommandBuffer");
 		createCommandBuffer();
-		std::cout << "createSyncObjects" << std::endl;
+		std::println("createSyncObjects");
 		createSyncObjects();
-		std::cout << "Vulkan objects initialized" << std::endl;
+		std::println("Vulkan objects initialized");
 	}
 	catch (const std::exception& e)
 	{

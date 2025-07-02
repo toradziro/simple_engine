@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -9,6 +7,7 @@
 #include <algorithm>
 #include <ranges>
 #include <concepts>
+#include <functional>
 
 template<typename Event>
 std::string eventId()
@@ -16,34 +15,45 @@ std::string eventId()
 	return typeid(Event).name();
 }
 
-enum class EventCategory : uint8_t
-{
-	SystemEvent,	//-- Like resizing/closing window
-	MouseEvent,
-	KeeEvent
-};
-
 class Event
 {
+public:
+	template <typename T>
+	Event(T event)
+		: m_eventObject(std::make_unique<EventObject<T>>(std::move(event)))
+	{}
+
+	template <typename T>
+	T& getUnderlyingEvent()
+	{
+		auto eventObject = static_cast<EventObject<T>*>(m_eventObject.get());
+		return eventObject->m_event;
+	}
+
+	const std::string& eventId() const
+	{
+		return m_eventObject->eventId();
+	}
+
+	void setHandeled()
+	{
+		m_eventObject->setHandeled();
+	}
+
 private:
 	struct IEvent
 	{
 		virtual ~IEvent() = default;
-		virtual std::string eventId() const = 0;
-		virtual bool isHandeled() const = 0;
-		virtual void setHandeled() = 0;
+
+		virtual bool				isHandeled() const = 0;
+		virtual void				setHandeled() = 0;
+		virtual const std::string&	eventId() const = 0;
 	};
 
 	template <typename T>
 	struct EventObject final : IEvent
 	{
-		template<typename... Args>
-		EventObject(Args&&... args) : m_event(std::forward<Args>(args)...) {}
-
-		virtual std::string eventId() const override
-		{
-			return ::eventId<T>();
-		}
+		EventObject(T&& event) : m_event(std::move(event)), m_eventId(::eventId<T>()) {}
 
 		virtual bool isHandeled() const override
 		{
@@ -55,73 +65,43 @@ private:
 			m_isHandeled = true;
 		}
 
-		T		m_event;
-		bool	m_isHandeled;
+		virtual const std::string& eventId() const override
+		{
+			return m_eventId;
+		}
+
+		T					m_event;
+		bool				m_isHandeled;
+		const std::string	m_eventId;
 	};
-
-public:
-	template <typename T, typename... Args>
-	explicit Event(std::in_place_type_t<T>, Args&&... args)
-		: m_eventObject(std::make_unique<EventObject<T>>(std::forward<Args>(args)...))
-	{}
-
-	template <typename T>
-	T& getUnderlyingEvent()
-	{
-		auto eventObject = static_cast<EventObject<T>*>(m_eventObject.get());
-		return eventObject->m_event;
-	}
-
-	std::string eventId() const
-	{
-		return m_eventObject->eventId();
-	}
 
 private:
 	std::unique_ptr<IEvent> m_eventObject;
 };
 
-struct EventHolder
+class EventDispatcher
 {
-	template<typename EventType, typename... Args>
-	void addEvent(Args&&... args)
-	{
-		m_events.insert({
-				eventId<EventType>(),
-				Event{ std::in_place_type<EventType>, std::forward<Args>(args)... }
-			});
-	}
+private:
+	template<typename T>
+	using EventFn = std::function<bool(T&)>;
+
+public:
+	EventDispatcher(Event& event) : m_event(event) {}
 
 	template<typename T>
-	T& getEvent()
+	bool dispatch(EventFn<T> handler)
 	{
-		assert(m_events.count(eventId<T>()));
-		return m_events[eventId<T>()].getUnderlyingEvent<T>();
-	}
-
-	template<typename T>
-	bool hasEvent() const
-	{
-		return m_events.count(eventId<T>()) && !isHandeled<T>();
-	}
-
-	template<typename T>
-	bool isHandeled() const
-	{
-		return m_events[eventId<T>()].isHandeled();
-	}
-
-	template<typename T>
-	void setHandeled()
-	{
-		m_events[eventId<T>()].setHandeled();
-	}
-
-	void clear()
-	{
-		m_events.clear();
+		if (m_event.eventId() == eventId<T>())
+		{
+			if (handler(m_event.getUnderlyingEvent()))
+			{
+				m_event.setHandeled();
+			}
+			return true;
+		}
+		return false;
 	}
 
 private:
-	std::unordered_map<std::string, Event> m_events;
+	Event& m_event;
 };

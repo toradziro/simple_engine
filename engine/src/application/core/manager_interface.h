@@ -84,7 +84,7 @@ struct ManagerHolder
 		auto managerIdStr = managerId<T>();
 		
 		assert(m_managers.count(managerIdStr));
-		return m_managers[managerIdStr].getUnderlyingManager<T>();
+		return m_managers.at(managerIdStr).getUnderlyingManager<T>();
 	}
 
 private:
