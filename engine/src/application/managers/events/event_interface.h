@@ -1,5 +1,7 @@
 #pragma once
 
+#include "events_types.h"
+
 #include <memory>
 #include <unordered_map>
 #include <string>
@@ -14,6 +16,11 @@ std::string eventId()
 {
 	return typeid(Event).name();
 }
+
+class Event;
+
+template<typename T>
+bool eventTypeCheck(Event& event);
 
 class Event
 {
@@ -30,14 +37,23 @@ public:
 		return eventObject->m_event;
 	}
 
+	void setHandeled()
+	{
+		m_eventObject->setHandeled();
+	}
+
+private:
+	template<typename T>
+	friend bool eventTypeCheck(Event& event);
+
 	const std::string& eventId() const
 	{
 		return m_eventObject->eventId();
 	}
 
-	void setHandeled()
+	bool isHandeled() const
 	{
-		m_eventObject->setHandeled();
+		return m_eventObject->isHandeled();
 	}
 
 private:
@@ -71,7 +87,7 @@ private:
 		}
 
 		T					m_event;
-		bool				m_isHandeled;
+		bool				m_isHandeled = false;
 		const std::string	m_eventId;
 	};
 
@@ -79,29 +95,8 @@ private:
 	std::unique_ptr<IEvent> m_eventObject;
 };
 
-class EventDispatcher
+template<typename T>
+bool eventTypeCheck(Event& event)
 {
-private:
-	template<typename T>
-	using EventFn = std::function<bool(T&)>;
-
-public:
-	EventDispatcher(Event& event) : m_event(event) {}
-
-	template<typename T>
-	bool dispatch(EventFn<T> handler)
-	{
-		if (m_event.eventId() == eventId<T>())
-		{
-			if (handler(m_event.getUnderlyingEvent()))
-			{
-				m_event.setHandeled();
-			}
-			return true;
-		}
-		return false;
-	}
-
-private:
-	Event& m_event;
-};
+	return event.eventId() == eventId<T>() && !event.isHandeled();
+}

@@ -3,7 +3,6 @@
 #include <application/managers/window_manager.h>
 #include <application/managers/events/events_types.h>
 
-
 WindowSystem::WindowSystem(EngineContext& context, WindowInfo&& info) noexcept
 	: m_context(context)
 	, m_info(std::move(info))
@@ -22,26 +21,120 @@ WindowSystem::WindowSystem(EngineContext& context, WindowInfo&& info) noexcept
 
 	glfwSetWindowUserPointer(winManager.m_window, &m_info);
 
-	glfwSetWindowCloseCallback(winManager.m_window, [](GLFWwindow* win)
+	glfwSetWindowCloseCallback(winManager.m_window, [](GLFWwindow* window)
 		{
-			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(win);
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+
 			WindowCloseEvent event;
 			Event wrappedEvent(std::move(event));
+
 			winInfo->m_eventCallback(wrappedEvent);
 		});
 
-	glfwSetFramebufferSizeCallback(winManager.m_window, [](GLFWwindow* window, int width, int height)
+	glfwSetWindowSizeCallback(winManager.m_window, [](GLFWwindow* window, int width, int height)
 		{
 			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+
+			winInfo->m_width = width;
+			winInfo->m_height = height;
+
+			WindowResizeEvent event {
+				.m_width = width,
+				.m_height = height
+			};
+			Event wrappedEvent(std::move(event));
+
+			winInfo->m_eventCallback(wrappedEvent);
 		});
 
-	glfwSetKeyCallback(winManager.m_window, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+	glfwSetKeyCallback(winManager.m_window, [](GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
 		{
 			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
-
-			if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+			switch (action)
 			{
+			case GLFW_PRESS:
+			{
+				KeyPressedEvent event {
+					.m_keyCode = key,
+					.m_repeatCount = 0
+				};
+				Event wrappedEvent(std::move(event));
+
+				winInfo->m_eventCallback(wrappedEvent);
+				break;
 			}
+			case GLFW_RELEASE:
+			{
+				KeyReleasedEvent event { .m_keyCode = key };
+				Event wrappedEvent(std::move(event));
+				
+				winInfo->m_eventCallback(wrappedEvent);
+				break;
+			}
+			case GLFW_REPEAT:
+			{
+				KeyPressedEvent event {
+					.m_keyCode = key,
+					.m_repeatCount = 1
+				};
+				Event wrappedEvent(std::move(event));
+				
+				winInfo->m_eventCallback(wrappedEvent);
+				break;
+			}
+			default:
+				break;
+			}
+		});
+
+	glfwSetMouseButtonCallback(winManager.m_window, [](GLFWwindow* window, int button, int action, int /*mods*/)
+		{
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+			switch (action)
+			{
+			case GLFW_PRESS:
+			{
+				MouseButtonPressedEvent event { .m_buttonCode = button };
+				Event wrappedEvent(std::move(event));
+
+				winInfo->m_eventCallback(wrappedEvent);
+				break;
+			}
+			case GLFW_RELEASE:
+			{
+				MouseButtonReleasedEvent event { .m_buttonCode = button };
+				Event wrappedEvent(std::move(event));
+				
+				winInfo->m_eventCallback(wrappedEvent);
+				break;
+			}
+			default:
+				break;
+			}
+		});
+
+	glfwSetScrollCallback(winManager.m_window, [](GLFWwindow* window, double xoffset, double yoffset)
+		{
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+			MouseScrolledEvent event {
+				.m_offsetX = (float)xoffset,
+				.m_offsetY = (float)yoffset
+			};
+			Event wrappedEvent(std::move(event));
+			
+			winInfo->m_eventCallback(wrappedEvent);
+		});
+
+	glfwSetCursorPosCallback(winManager.m_window, [](GLFWwindow* window, double xpos, double ypos)
+		{
+			WindowInfo* winInfo = (WindowInfo*)glfwGetWindowUserPointer(window);
+			MouseMovedEvent event {
+				.m_mouseX = (float)xpos,
+				.m_mouseY = (float)ypos
+			};
+			Event wrappedEvent(std::move(event));
+			
+			winInfo->m_eventCallback(wrappedEvent);
 		});
 }
 
@@ -60,3 +153,6 @@ void WindowSystem::update(float dt)
 {
 	glfwPollEvents();
 }
+
+void WindowSystem::onEvent(Event& event) const
+{}

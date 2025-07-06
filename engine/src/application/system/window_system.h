@@ -21,6 +21,7 @@ public:
 	~WindowSystem() noexcept;
 
 	void	update(float dt);
+	void	onEvent(Event& event) const;
 
 private:
 	EngineContext&	m_context;

@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <application/managers/renderer_manager.h>
+#include <application/managers/events/event_interface.h>
 
 struct EngineContext;
 
@@ -55,6 +56,7 @@ public:
 	~RendererSystem();
 
 	void update(float dt);
+	void onEvent(Event& event);
 	void beginFrame(float dt);
 	void endFrame();
 	void resizedWindow() { m_device.resizedWindow(); }

@@ -1,13 +1,15 @@
 #include "renderer.h"
 
-#include <application/engine.h>
-#include <application/managers/window_manager.h>
-
-
 #include <filesystem>
 #include <iostream>
 #include <algorithm>
 #include <ranges>
+#include <print>
+#include <format>
+
+#include <application/engine.h>
+#include <application/managers/window_manager.h>
+#include <application/managers/events/events_types.h>
 
 RendererSystem::RendererSystem(EngineContext& context)
 	: m_engineContext(context)
@@ -35,6 +37,23 @@ void RendererSystem::update(float dt)
 {
 	beginFrame(dt);
 	endFrame();
+}
+
+void RendererSystem::onEvent(Event& event)
+{
+	if (eventTypeCheck<WindowResizeEvent>(event))
+	{
+		std::println("WindowResizeEvent");
+
+		resizedWindow();
+		event.setHandeled();
+	}
+	//-- Mouse moved check example
+	//-- if (eventTypeCheck<MouseMovedEvent>(event))
+	//-- {
+	//-- 	auto& mouseMoved = event.getUnderlyingEvent<MouseMovedEvent>();
+	//-- 	std::println("Mouse moved: {} {}", mouseMoved.m_mouseX, mouseMoved.m_mouseY);
+	//-- }
 }
 
 void RendererSystem::beginFrame(float dt)

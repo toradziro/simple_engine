@@ -4,6 +4,8 @@
 #include <format>
 #include <chrono>
 #include <ctime>
+#include <print>
+
 #include <application/managers/window_manager.h>
 #include <application/system/window_system.h>
 #include <application/managers/events/events_types.h>
@@ -19,9 +21,15 @@ Engine::Engine()
 		.m_height = 800,
 		.m_eventCallback = [&](Event& event)
 			{
-				if (event.eventId() == eventId<WindowCloseEvent>())
+				if (eventTypeCheck<WindowCloseEvent>(event))
 				{
 					running = false;
+					event.setHandeled();
+					std::println("WindowCloseEvent");
+				}
+				for (auto& [_, system] : m_systemHolder)
+				{
+					system.onEvent(event);
 				}
 			}
 	};

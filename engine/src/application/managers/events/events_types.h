@@ -14,8 +14,8 @@ struct WindowResizeEvent
 
 struct KeyPressedEvent
 {
-	int		m_repeatCount;
 	int		m_keyCode;
+	int		m_repeatCount;
 };
 
 struct KeyReleasedEvent
