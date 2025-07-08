@@ -25,4 +25,6 @@ private:
 	//-- test
 	SpriteInfo		m_firstSprite;
 	SpriteInfo		m_secondSprite;
+	
+	bool			m_running = true;
 };

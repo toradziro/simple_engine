@@ -20,6 +20,20 @@ struct SpriteInfo
 	std::string					m_texturePath;
 };
 
+struct ImGuiInitInfo
+{
+	uint32_t			m_apiVersion;
+	VkInstance			m_instance;
+	VkPhysicalDevice	m_physicalDevice;
+	VkDevice			m_device;
+	uint32_t			m_queueFamily;
+	VkQueue				m_queue;
+	VkDescriptorPool	m_descriptorPool;
+	VkRenderPass		m_renderPass;
+	uint32_t			m_minImageCount;
+	uint32_t			m_imageCount;
+};
+
 class RendererManager
 {
 public:
@@ -28,9 +42,13 @@ public:
 		m_sprites.push_back(spriteInfo);
 	}
 
+	//-- We need this function only to avoid ImGuiSystem knowing anything about vulkan device
+	const ImGuiInitInfo& imguiInfo() { return m_imGuiInitInfo; }
+
 private:
 	friend class RendererSystem;
 
 	//-- User notation object
 	std::vector<SpriteInfo>				m_sprites;
+	ImGuiInitInfo						m_imGuiInitInfo;
 };

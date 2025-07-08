@@ -19,6 +19,19 @@ RendererSystem::RendererSystem(EngineContext& context)
 		m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
 		m_texureCache = std::make_unique<TextureCache>(m_device);
 		m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
+
+		auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
+		auto& imGuiInfo = rendererManager.m_imGuiInitInfo;
+		imGuiInfo.m_apiVersion;
+		imGuiInfo.m_instance;
+		imGuiInfo.m_physicalDevice;
+		imGuiInfo.m_device;
+		imGuiInfo.m_queueFamily;
+		imGuiInfo.m_queue;
+		imGuiInfo.m_descriptorPool;
+		imGuiInfo.m_renderPass;
+		imGuiInfo.m_minImageCount;
+		imGuiInfo.m_imageCount;
 	}
 	catch (const std::exception& e)
 	{

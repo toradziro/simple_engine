@@ -8,10 +8,9 @@
 
 #include <application/managers/window_manager.h>
 #include <application/system/window_system.h>
+#include <application/editor/imgui_system.h>
 #include <application/managers/events/events_types.h>
 #include <renderer/renderer.h>
-
-static bool running = true;
 
 Engine::Engine()
 {
@@ -23,7 +22,7 @@ Engine::Engine()
 			{
 				if (eventTypeCheck<WindowCloseEvent>(event))
 				{
-					running = false;
+					m_running = false;
 					event.setHandeled();
 					std::println("WindowCloseEvent");
 				}
@@ -41,6 +40,7 @@ Engine::Engine()
 	//-- Create systems
 	m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));
 	m_systemHolder.addSystem<RendererSystem>(m_context);
+	m_systemHolder.addSystem<ImGuiSystem>(m_context);
 
 	//-- Test sprites
 	const std::array<VertexData, 4> firstQuad = {
@@ -67,7 +67,7 @@ void Engine::run()
 {
 	float lastFrameDt = 0.0f;
 
-	while (running)
+	while (m_running)
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
