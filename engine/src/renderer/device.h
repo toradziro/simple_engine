@@ -13,6 +13,7 @@
 
 #include "texture.h"
 #include <application/managers/renderer_manager.h>
+#include <application/editor/imgui_integration.h>
 
 struct QueueFamilies
 {
@@ -138,9 +139,9 @@ public:
 		, const TexturedGeometryBatch& geometryBatch
 		, const BatchIndecies& indicesBatch);
 
-	void	checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
+	void	checkExtensionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const;
 	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const;
-	[[nodiscard]] bool	checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const;
+	[[nodiscard]] bool	checkDeviceExtensionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const;
 
 	[[nodiscard]] auto	checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const->PhysicalDeviceData;
 	[[nodiscard]] auto	checkQueueFamilies(vk::PhysicalDevice device) const->QueueFamilies;
@@ -177,8 +178,20 @@ public:
 
 	void	setMaxTextures(uint32_t maxPossibleTextures) { m_maxTextures = maxPossibleTextures; }
 
+	//-- Info getters
+	uint32_t				apiVersion() const { return m_apiVersion; }
+	uint32_t				getGraphicQueueFamily() const { return m_physicalDeviceData.m_queueFamilies.m_graphicQueue; }
+	uint32_t				minImageCount() const { return m_swapchainImages.size(); }
+	uint32_t				imageCount() const { return m_swapchainImages.size(); }
+	vk::Instance			instance() const { return m_vkInstance; }
+	vk::PhysicalDevice		physicalDevice() const { return m_physicalDevice; }
+	vk::Device				device() const { return m_logicalDevice; }
+	vk::Queue				graphicQueue() const { return m_queues.m_graphicQueue; }
+	vk::DescriptorPool		descriptorPool() const { return m_descriptorPool; }
+	vk::RenderPass			renderPass() const { return m_renderPass; }
+
 private:
-	const std::vector<const char*> C_DEVICE_EXTENTIONS
+	const std::vector<const char*> C_DEVICE_EXTENSIONS
 	{
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
@@ -222,6 +235,9 @@ private:
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
 
+	ImGuiIntegration				m_imGuiIntegration;
+
+	uint32_t						m_apiVersion = 0;
 	uint32_t						m_currFrame = 0;
 	uint32_t						m_currImageIndex = 0;
 	uint32_t						m_maxTextures = 200;

@@ -8,7 +8,6 @@
 
 #include <application/managers/window_manager.h>
 #include <application/system/window_system.h>
-#include <application/editor/imgui_system.h>
 #include <application/managers/events/events_types.h>
 #include <renderer/renderer.h>
 
@@ -40,7 +39,6 @@ Engine::Engine()
 	//-- Create systems
 	m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));
 	m_systemHolder.addSystem<RendererSystem>(m_context);
-	m_systemHolder.addSystem<ImGuiSystem>(m_context);
 
 	//-- Test sprites
 	const std::array<VertexData, 4> firstQuad = {
@@ -72,7 +70,7 @@ void Engine::run()
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
 		
-		//-- Tst drawind here
+		//-- Tst drawing here
 		rendererManager.addSpriteToDrawList(m_firstSprite);
 		rendererManager.addSpriteToDrawList(m_secondSprite);
 		
