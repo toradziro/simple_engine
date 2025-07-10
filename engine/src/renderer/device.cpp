@@ -1208,9 +1208,7 @@ vk::SurfaceFormatKHR VkGraphicDevice::chooseSurfaceFormat(const std::vector<vk::
 {
 	for (const auto& availableFormat : supportedFormats)
 	{
-		//-- BGR and nonlinear color space is the best for small indie game
-		//-- since it's usually supported by the most monitors
-		if ((availableFormat.format == vk::Format::eB8G8R8A8Srgb || availableFormat.format == vk::Format::eR8G8B8A8Srgb)
+		if ((availableFormat.format == vk::Format::eB8G8R8A8Unorm || availableFormat.format == vk::Format::eR8G8B8A8Unorm)
 			&& availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
 		{
 			return availableFormat;

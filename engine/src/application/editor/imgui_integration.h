@@ -31,4 +31,7 @@ public:
 	void update(VkCommandBuffer command_buffer);
 
 	void shutdown();
+	
+private:
+	void setupStyle();
 };

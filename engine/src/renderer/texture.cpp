@@ -68,7 +68,7 @@ void VulkanTexture::createVulkanResources()
 	m_device->getLogicalDevice().unmapMemory(stagingBufferMemory);
 
 	// Create VkImage
-	vk::Format vkFormat = vk::Format::eR8G8B8A8Srgb;
+	vk::Format vkFormat = vk::Format::eR8G8B8A8Unorm;
 
 	vk::ImageCreateInfo imageInfo = {};
 	imageInfo.setImageType(vk::ImageType::e2D)
