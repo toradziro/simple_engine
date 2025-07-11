@@ -141,6 +141,22 @@ void VkGraphicDevice::init(GLFWwindow* window)
 		std::println("createSyncObjects");
 		createSyncObjects();
 		std::println("Vulkan objects initialized");
+		
+		ImGuiInitInfo imGuiIntegrationInfo {
+			.m_apiVersion		= apiVersion(),
+			.m_instance			= instance(),
+			.m_physicalDevice	= physicalDevice(),
+			.m_device			= device(),
+			.m_queueFamily		= getGraphicQueueFamily(),
+			.m_queue			= graphicQueue(),
+			.m_descriptorPool	= descriptorPool(),
+			.m_renderPass		= renderPass(),
+			.m_minImageCount	= minImageCount(),
+			.m_imageCount		= imageCount(),
+			.m_window			= m_window
+		};
+
+		m_imGuiIntegration = ImGuiIntegration(imGuiIntegrationInfo);
 	}
 	catch (const std::exception& e)
 	{
@@ -151,6 +167,8 @@ void VkGraphicDevice::init(GLFWwindow* window)
 
 void VkGraphicDevice::shutdown()
 {
+	m_imGuiIntegration.shutdown();
+
 	m_queues.m_graphicQueue.waitIdle();
 	m_queues.m_presentationQueue.waitIdle();
 
@@ -311,27 +329,29 @@ void VkGraphicDevice::createVkInstance()
 	appInfo.setPApplicationName("Vulkan Study")
 		.setApiVersion(VK_API_VERSION_1_3);
 
+	m_apiVersion = VK_API_VERSION_1_3;
+
 	//-- Creation info for a vkInstance
 	vk::InstanceCreateInfo createInfo = {};
 	createInfo.setPApplicationInfo(&appInfo);
 
-	//-- Create collection to hold instance extentions
-	std::vector<const char*> instanceExtentions;
+	//-- Create collection to hold instance extensions
+	std::vector<const char*> instanceextensions;
 
-	uint32_t extentionsCount = 0;
-	const char** glfwExtentionsList = glfwGetRequiredInstanceExtensions(&extentionsCount);
-	instanceExtentions.reserve(extentionsCount);
-	for (uint32_t i = 0; i < extentionsCount; ++i)
+	uint32_t extensionsCount = 0;
+	const char** glfwextensionsList = glfwGetRequiredInstanceExtensions(&extensionsCount);
+	instanceextensions.reserve(extensionsCount);
+	for (uint32_t i = 0; i < extensionsCount; ++i)
 	{
-		instanceExtentions.push_back(glfwExtentionsList[i]);
+		instanceextensions.push_back(glfwextensionsList[i]);
 	}
 
-	//-- Check if all requested extentions supported
-	checkExtentionsSupport(instanceExtentions);
+	//-- Check if all requested extensions supported
+	checkExtensionsSupport(instanceextensions);
 
-	//-- Set extentions we received from glfw
-	createInfo.setEnabledExtensionCount(static_cast<uint32_t>(instanceExtentions.size()))
-		.setPEnabledExtensionNames(instanceExtentions);
+	//-- Set extensions we received from glfw
+	createInfo.setEnabledExtensionCount(static_cast<uint32_t>(instanceextensions.size()))
+		.setPEnabledExtensionNames(instanceextensions);
 
 	//-- This variable we will use to enable validation layers
 	std::vector<const char*> validationLayers;
@@ -351,20 +371,20 @@ void VkGraphicDevice::createVkInstance()
 	m_vkInstance = vk::createInstance(createInfo);
 }
 
-void VkGraphicDevice::checkExtentionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
+void VkGraphicDevice::checkExtensionsSupport(const std::vector<const char*>& instanceextensionsAppNeed) const
 {
-	auto extentionsProps = vk::enumerateInstanceExtensionProperties();
-	for (const char* extention : instanceExtentionsAppNeed)
+	auto extensionsProps = vk::enumerateInstanceExtensionProperties();
+	for (const char* extension : instanceextensionsAppNeed)
 	{
-		auto itRes = std::ranges::find_if(extentionsProps, [&](const vk::ExtensionProperties& vkInst)
+		auto itRes = std::ranges::find_if(extensionsProps, [&](const vk::ExtensionProperties& vkInst)
 			{
-				if (strcmp(vkInst.extensionName, extention) == 0)
+				if (strcmp(vkInst.extensionName, extension) == 0)
 				{
 					return true;
 				}
 				return false;
 			});
-		assert(itRes != extentionsProps.end());
+		assert(itRes != extensionsProps.end());
 	}
 }
 
@@ -409,8 +429,8 @@ void VkGraphicDevice::createLogicalDevice()
 	vk::DeviceCreateInfo deviceCreateInfo = {};
 	deviceCreateInfo.setQueueCreateInfos(queuesCreateInfos)
 		.setPEnabledFeatures(&deviceFeatures)
-		.setEnabledExtensionCount(C_DEVICE_EXTENTIONS.size())
-		.setPEnabledExtensionNames(C_DEVICE_EXTENTIONS);
+		.setEnabledExtensionCount(C_DEVICE_EXTENSIONS.size())
+		.setPEnabledExtensionNames(C_DEVICE_EXTENSIONS);
 
 	//-- Creating logical device
 	m_logicalDevice = m_physicalDevice.createDevice(deviceCreateInfo);
@@ -425,21 +445,21 @@ void VkGraphicDevice::createLogicalDevice()
 		, &m_queues.m_presentationQueue);
 }
 
-bool VkGraphicDevice::checkDeviceExtentionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
+bool VkGraphicDevice::checkDeviceExtensionsSupport(const std::vector<const char*>& deviceextensions, vk::PhysicalDevice physicalDevice) const
 {
-	auto extentionsProps = physicalDevice.enumerateDeviceExtensionProperties();
+	auto extensionsProps = physicalDevice.enumerateDeviceExtensionProperties();
 
-	for (const char* extention : deviceExtentions)
+	for (const char* extension : deviceextensions)
 	{
-		auto itRes = std::ranges::find_if(extentionsProps, [&](const vk::ExtensionProperties& vkInst)
+		auto itRes = std::ranges::find_if(extensionsProps, [&](const vk::ExtensionProperties& vkInst)
 			{
-				if (strcmp(vkInst.extensionName, extention) == 0)
+				if (strcmp(vkInst.extensionName, extension) == 0)
 				{
 					return true;
 				}
 				return false;
 			});
-		if (itRes == extentionsProps.end())
+		if (itRes == extensionsProps.end())
 		{
 			return false;
 		}
@@ -1132,6 +1152,9 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 
 		commandBuffer.drawIndexed(geometryBatch[i].m_spritesCount * 6, 1, 0, 0, 0);
 	}
+
+	m_imGuiIntegration.update(m_commandBuffers[m_currFrame]);
+
 	commandBuffer.endRenderPass();
 	commandBuffer.end();
 }
@@ -1185,9 +1208,7 @@ vk::SurfaceFormatKHR VkGraphicDevice::chooseSurfaceFormat(const std::vector<vk::
 {
 	for (const auto& availableFormat : supportedFormats)
 	{
-		//-- BGR and nonlinear color space is the best for small indie game
-		//-- since it's usually supported by the most monitors
-		if ((availableFormat.format == vk::Format::eB8G8R8A8Srgb || availableFormat.format == vk::Format::eR8G8B8A8Srgb)
+		if ((availableFormat.format == vk::Format::eB8G8R8A8Unorm || availableFormat.format == vk::Format::eR8G8B8A8Unorm)
 			&& availableFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
 		{
 			return availableFormat;
@@ -1415,8 +1436,8 @@ PhysicalDeviceData VkGraphicDevice::checkIfPhysicalDeviceSuitable(vk::PhysicalDe
 		data.m_score += 10;
 	}
 
-	//-- Device extentions
-	if (checkDeviceExtentionsSupport(C_DEVICE_EXTENTIONS, device))
+	//-- Device extensions
+	if (checkDeviceExtensionsSupport(C_DEVICE_EXTENSIONS, device))
 	{
 		data.m_score += 10;
 	}
@@ -1429,7 +1450,7 @@ PhysicalDeviceData VkGraphicDevice::checkIfPhysicalDeviceSuitable(vk::PhysicalDe
 		data.m_score += 10;
 	}
 
-	//-- Prefer discrete videocard but only if it fits by queues reqs
+	//-- Prefer discrete video card but only if it fits by queues reqs
 	if (data.m_score > 0 && properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
 	{
 		data.m_score += 1;

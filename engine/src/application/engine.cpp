@@ -11,8 +11,6 @@
 #include <application/managers/events/events_types.h>
 #include <renderer/renderer.h>
 
-static bool running = true;
-
 Engine::Engine()
 {
 	WindowInfo winInfo = {
@@ -23,7 +21,7 @@ Engine::Engine()
 			{
 				if (eventTypeCheck<WindowCloseEvent>(event))
 				{
-					running = false;
+					m_running = false;
 					event.setHandeled();
 					std::println("WindowCloseEvent");
 				}
@@ -67,12 +65,12 @@ void Engine::run()
 {
 	float lastFrameDt = 0.0f;
 
-	while (running)
+	while (m_running)
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
 		
-		//-- Tst drawind here
+		//-- Tst drawing here
 		rendererManager.addSpriteToDrawList(m_firstSprite);
 		rendererManager.addSpriteToDrawList(m_secondSprite);
 		

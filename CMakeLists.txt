@@ -36,6 +36,7 @@ set(GLM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/glm")
 set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
 set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc/libshaderc/include")
 set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/stb")
+set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
@@ -50,6 +51,9 @@ add_executable(engine)
 # Find source files
 file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
 file(GLOB_RECURSE engine_HEADERS "engine/src/**.h")
+# Find ImGui source files
+file(GLOB imgui_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking/*.cpp")
+file(GLOB imgui_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking/*.h")
 
 # File structure setup for Visual Studio
 # Function to set file structure as on disk
@@ -67,10 +71,10 @@ function(assign_source_group)
 endfunction(assign_source_group)
 
 # Apply function to our files
-assign_source_group(${engine_SOURCES} ${engine_HEADERS})
+assign_source_group(${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Source files
-target_sources(engine PRIVATE ${engine_SOURCES} ${engine_HEADERS})
+target_sources(engine PRIVATE ${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Include files
 target_include_directories(engine PRIVATE 
@@ -79,7 +83,8 @@ target_include_directories(engine PRIVATE
     ${GLM_INCLUDE_DIR}
     ${VULKAN_INCLUDE_DIR}
     ${SHADERC_INCLUDE_DIR}
-	${STB_INCLUDE_DIR}
+    ${STB_INCLUDE_DIR}
+    ${IMGUI_INCLUDE_DIR}
 )
 
 # Vulkan path
