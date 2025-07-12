@@ -11,6 +11,8 @@
 #include <application/managers/window_manager.h>
 #include <application/managers/events/events_types.h>
 
+#include <glm/gtc/quaternion.hpp>
+
 RendererSystem::RendererSystem(EngineContext& context)
 	: m_engineContext(context)
 {
@@ -121,7 +123,22 @@ void RendererSystem::batchSprites()
 
 		for (const auto& sprite : batch)
 		{
-			batchedVertices.push_back(sprite.m_verticies);
+			constexpr std::array<VertexData, 4> C_QUAD_DATA = {
+				VertexData{{-0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+				VertexData{{0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+				VertexData{{0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+				VertexData{{-0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+			};
+			glm::mat4 transform = { 1.0f };
+			transform = glm::translate(transform, sprite.m_position);
+			std::array<VertexData, 4> transformedData = {};
+			for (int i = 0; i < 4; ++i)
+			{
+				transformedData[i].m_color = C_QUAD_DATA[i].m_color;
+				transformedData[i].m_texCoord = C_QUAD_DATA[i].m_texCoord;
+				transformedData[i].m_vertex = transform * C_QUAD_DATA[i].m_vertex;
+			}
+			batchedVertices.push_back(transformedData);
 		}
 
 		//-- Finally - we got the batch

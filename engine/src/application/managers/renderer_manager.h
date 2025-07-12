@@ -13,15 +13,16 @@ class ImGuiIntegration;
 
 struct VertexData
 {
-	glm::vec2	m_vertex;
+	glm::vec4	m_vertex;
 	glm::vec3	m_color;
 	glm::vec2	m_texCoord;
 };
 
 struct SpriteInfo
 {
-	std::array<VertexData, 4>	m_verticies;
+	glm::vec3					m_position;
 	std::string					m_texturePath;
+	//std::array<VertexData, 4>	m_verticies;
 };
 
 class RendererManager

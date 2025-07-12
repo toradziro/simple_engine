@@ -4,22 +4,8 @@
 
 EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context)
 {
-	//-- Test sprites
-	const std::array<VertexData, 4> firstQuad = {
-		VertexData{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-		VertexData{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-		VertexData{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-		VertexData{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	};
-	const std::array<VertexData, 4> secondQuad = {
-		VertexData{{0.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-		VertexData{{1.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-		VertexData{{1.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-		VertexData{{0.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	};
-
-	m_firstSprite = { firstQuad, "images/nyan_cat.png" };
-	m_secondSprite = { secondQuad, "images/gg2.png" };
+	m_firstSprite  = { { 0.5f, 0.5f, 0.0f }, "images/nyan_cat.png" };
+	m_secondSprite = { { 0.0f, 0.0f, 0.0f }, "images/gg2.png" };
 }
 
 void EditorSystem::update(float dt)
