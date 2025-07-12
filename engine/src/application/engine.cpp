@@ -10,6 +10,8 @@
 #include <application/system/window_system.h>
 #include <application/managers/events/events_types.h>
 #include <renderer/renderer.h>
+#include <application/managers/renderer_manager.h>
+#include <application/editor/editor_system.h>
 
 Engine::Engine()
 {
@@ -39,23 +41,7 @@ Engine::Engine()
 	//-- Create systems
 	m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));
 	m_systemHolder.addSystem<RendererSystem>(m_context);
-
-	//-- Test sprites
-	const std::array<VertexData, 4> firstQuad = {
-		VertexData{{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-		VertexData{{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-		VertexData{{0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-		VertexData{{-0.5f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	};
-	const std::array<VertexData, 4> secondQuad = {
-		VertexData{{0.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-		VertexData{{1.25f, -0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-		VertexData{{1.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-		VertexData{{0.25f, 0.5f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-	};
-
-	m_firstSprite = { firstQuad, "images/nyan_cat.png" };
-	m_secondSprite = { secondQuad, "images/gg2.png" };
+	m_systemHolder.addSystem<EditorSystem>(m_context);
 }
 
 Engine::~Engine()
@@ -69,10 +55,6 @@ void Engine::run()
 	{
 		auto t_start = std::chrono::high_resolution_clock::now();
 		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
-		
-		//-- Tst drawing here
-		rendererManager.addSpriteToDrawList(m_firstSprite);
-		rendererManager.addSpriteToDrawList(m_secondSprite);
 		
 		for (auto& [name, system] : m_systemHolder)
 		{

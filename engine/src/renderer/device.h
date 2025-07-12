@@ -190,6 +190,11 @@ public:
 	vk::DescriptorPool		descriptorPool() const { return m_descriptorPool; }
 	vk::RenderPass			renderPass() const { return m_renderPass; }
 
+	void					setImGuiDrawCallbacks(std::vector<RendererManager::ImGuiDrawCallback>& imGuiDrawCallbacks)
+	{
+		m_imGuiDrawCallbacks = imGuiDrawCallbacks;
+	}
+
 private:
 	const std::vector<const char*> C_DEVICE_EXTENSIONS
 	{
@@ -235,7 +240,8 @@ private:
 	std::vector<vk::Semaphore>		m_renderFinishedSemaphores;
 	std::vector<vk::Fence>			m_inFlightFences;
 
-	ImGuiIntegration				m_imGuiIntegration;
+	ImGuiIntegration								m_imGuiIntegration;
+	std::vector<RendererManager::ImGuiDrawCallback>	m_imGuiDrawCallbacks;
 
 	uint32_t						m_apiVersion = 0;
 	uint32_t						m_currFrame = 0;

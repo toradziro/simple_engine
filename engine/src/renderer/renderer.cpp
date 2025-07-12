@@ -77,7 +77,10 @@ void RendererSystem::endFrame()
 
 		batchSprites();
 		//-- Batch drawer will call device drawing
+		auto& drawListImGuiUI = m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi;
+		m_device.setImGuiDrawCallbacks(drawListImGuiUI);
 		m_batchDrawer->draw(m_batchedByTextureSprites);
+		m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi.clear();
 
 		//-- Clear collections, for now rendering has no any caches
 		m_batchedByTextureSprites.clear();

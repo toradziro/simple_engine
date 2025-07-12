@@ -3,9 +3,6 @@
 #include <backends/imgui_impl_vulkan.h>
 #include <backends/imgui_impl_glfw.h>
 
-#include <application/engine.h>
-#include <application/managers/window_manager.h>
-
 ImGuiIntegration::ImGuiIntegration(ImGuiInitInfo& initInfo)
 {
 	ImGui_ImplVulkan_InitInfo imGuiVulkanInitInfo = {
@@ -29,7 +26,8 @@ ImGuiIntegration::ImGuiIntegration(ImGuiInitInfo& initInfo)
 	setupStyle();
 }
 
-void ImGuiIntegration::update(VkCommandBuffer commandBuffer)
+void ImGuiIntegration::update(VkCommandBuffer commandBuffer
+	, std::vector<RendererManager::ImGuiDrawCallback>& drawListImGuiUI)
 {
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -68,7 +66,11 @@ void ImGuiIntegration::update(VkCommandBuffer commandBuffer)
 	}
 	ImGui::End();
 
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
+	for (auto& drawItem : drawListImGuiUI)
+	{
+		drawItem();
+	}
 
 	ImGui::Render();
 

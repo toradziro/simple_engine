@@ -1153,7 +1153,7 @@ void VkGraphicDevice::recordCommandBuffer(vk::CommandBuffer commandBuffer
 		commandBuffer.drawIndexed(geometryBatch[i].m_spritesCount * 6, 1, 0, 0, 0);
 	}
 
-	m_imGuiIntegration.update(m_commandBuffers[m_currFrame]);
+	m_imGuiIntegration.update(m_commandBuffers[m_currFrame], m_imGuiDrawCallbacks);
 
 	commandBuffer.endRenderPass();
 	commandBuffer.end();

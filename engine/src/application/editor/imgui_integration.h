@@ -4,6 +4,7 @@
 //-- C version of interface only for capability with ImGui
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
+#include <application/managers/renderer_manager.h>
 
 struct EngineContext;
 
@@ -28,7 +29,8 @@ public:
 	ImGuiIntegration() = default;
 	ImGuiIntegration(ImGuiInitInfo& initInfo);
 
-	void update(VkCommandBuffer command_buffer);
+	void update(VkCommandBuffer command_buffer
+		, std::vector<RendererManager::ImGuiDrawCallback>& drawListImGuiUI);
 
 	void shutdown();
 	
