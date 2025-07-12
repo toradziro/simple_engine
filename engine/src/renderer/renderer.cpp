@@ -13,6 +13,19 @@
 
 #include <glm/gtc/quaternion.hpp>
 
+namespace
+{
+
+constexpr std::array<VertexData, 4> C_QUAD_BASIC_DATA =
+{
+	VertexData{{-0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
+	VertexData{{0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
+	VertexData{{0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
+	VertexData{{-0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+};
+
+}
+
 RendererSystem::RendererSystem(EngineContext& context)
 	: m_engineContext(context)
 {
@@ -119,26 +132,24 @@ void RendererSystem::batchSprites()
 
 		//-- Gather all vertices
 		std::vector<std::array<VertexData, 4>> batchedVertices;
-		batchedVertices.reserve(std::ranges::distance(batch));
+		batchedVertices.reserve(std::distance(batch.begin(), batch.end()));
 
+		//-- Prepare sprite in batch
 		for (const auto& sprite : batch)
 		{
-			constexpr std::array<VertexData, 4> C_QUAD_DATA = {
-				VertexData{{-0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-				VertexData{{0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-				VertexData{{0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-				VertexData{{-0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
-			};
+			//-- TODO: Move this to component method
 			glm::mat4 transform = { 1.0f };
 			transform = glm::translate(transform, sprite.m_position);
 			std::array<VertexData, 4> transformedData = {};
+
+			//-- Here we transfrom from local to world coordinates
 			for (int i = 0; i < 4; ++i)
 			{
-				transformedData[i].m_color = C_QUAD_DATA[i].m_color;
-				transformedData[i].m_texCoord = C_QUAD_DATA[i].m_texCoord;
-				transformedData[i].m_vertex = transform * C_QUAD_DATA[i].m_vertex;
+				transformedData[i].m_color = C_QUAD_BASIC_DATA[i].m_color;
+				transformedData[i].m_texCoord = C_QUAD_BASIC_DATA[i].m_texCoord;
+				transformedData[i].m_vertex = transform * C_QUAD_BASIC_DATA[i].m_vertex;
 			}
-			batchedVertices.push_back(transformedData);
+			batchedVertices.push_back(std::move(transformedData));
 		}
 
 		//-- Finally - we got the batch
