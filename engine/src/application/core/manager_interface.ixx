@@ -1,12 +1,11 @@
-#pragma once
+export module manager_interface;
 
-#include <memory>
-#include <unordered_map>
-#include <string>
-#include <cassert>
-#include <algorithm>
-#include <ranges>
-#include <concepts>
+import <memory>;
+import <unordered_map>;
+import <string>;
+import <cassert>;
+import <algorithm>;
+import <ranges>;
 
 template<typename Manager>
 std::string managerId()
@@ -14,7 +13,7 @@ std::string managerId()
 	return typeid(Manager).name();
 }
 
-class Manager
+export class Manager
 {
 private:
 	struct IManager
@@ -62,7 +61,7 @@ private:
 	std::unique_ptr<IManager> m_managerObject;
 };
 
-struct ManagerHolder
+export struct ManagerHolder
 {
 	void addManager(Manager&& manager)
 	{
@@ -75,14 +74,14 @@ struct ManagerHolder
 		m_managers.insert({
 			managerId<ManagerType>(),
 			Manager{ std::in_place_type<ManagerType>, std::forward<Args>(args)... }
-		});
+			});
 	}
 
 	template<typename T>
 	T& getManager()
 	{
 		auto managerIdStr = managerId<T>();
-		
+
 		assert(m_managers.count(managerIdStr));
 		return m_managers.at(managerIdStr).getUnderlyingManager<T>();
 	}

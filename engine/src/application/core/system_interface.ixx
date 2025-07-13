@@ -1,13 +1,15 @@
-#pragma once
+export module system_interface;
 
-#include <memory>
-#include <vector>
-#include <string>
-#include <cassert>
-#include <algorithm>
-#include <ranges>
-#include <concepts>
-#include <application/managers/events/event_interface.h>
+import <memory>;
+import <vector>;
+import <string>;
+import <cassert>;
+import <algorithm>;
+import <ranges>;
+import <concepts>;
+import <typeinfo>;
+
+import event_interface;
 
 template<typename System>
 std::string systemId()
@@ -23,7 +25,7 @@ concept SystemConcept = requires(T obj, float dt, Event& event)
 	obj.onEvent(event);
 };
 
-class System
+export class System
 {
 public:
 	template <SystemConcept T, typename... Args>
@@ -83,7 +85,7 @@ private:
 	std::unique_ptr<ISystem> m_systemObject;
 };
 
-struct SystemHolder
+export struct SystemHolder
 {
 	void addSystem(System&& system)
 	{

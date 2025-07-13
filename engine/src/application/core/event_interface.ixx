@@ -1,15 +1,14 @@
-#pragma once
+export module event_interface;
 
-#include "events_types.h"
-
-#include <memory>
-#include <unordered_map>
-#include <string>
-#include <cassert>
-#include <algorithm>
-#include <ranges>
-#include <concepts>
-#include <functional>
+import <memory>;
+import <unordered_map>;
+import <string>;
+import <cassert>;
+import <algorithm>;
+import <ranges>;
+import <concepts>;
+import <functional>;
+import <typeinfo>;
 
 template<typename Event>
 std::string eventId()
@@ -17,12 +16,7 @@ std::string eventId()
 	return typeid(Event).name();
 }
 
-class Event;
-
-template<typename T>
-bool eventTypeCheck(Event& event);
-
-class Event
+export class Event
 {
 public:
 	template <typename T>
@@ -95,8 +89,55 @@ private:
 	std::unique_ptr<IEvent> m_eventObject;
 };
 
-template<typename T>
+export template<typename T>
 bool eventTypeCheck(Event& event)
 {
 	return event.eventId() == eventId<T>() && !event.isHandeled();
 }
+
+//-- Events Types
+//-- Application events
+export struct WindowCloseEvent
+{
+};
+
+//-- Key events
+export struct WindowResizeEvent
+{
+	int		m_width;
+	int		m_height;
+};
+
+export struct KeyPressedEvent
+{
+	int		m_keyCode;
+	int		m_repeatCount;
+};
+
+export struct KeyReleasedEvent
+{
+	int		m_keyCode;
+};
+
+//-- Mouse Events
+export struct MouseButtonPressedEvent
+{
+	int		m_buttonCode;
+};
+
+export struct MouseButtonReleasedEvent
+{
+	int		m_buttonCode;
+};
+
+export struct MouseMovedEvent
+{
+	float	m_mouseX;
+	float	m_mouseY;
+};
+
+export struct MouseScrolledEvent
+{
+	float	m_offsetX;
+	float	m_offsetY;
+};

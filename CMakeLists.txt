@@ -50,6 +50,7 @@ add_executable(engine)
 
 # Find source files
 file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
+file(GLOB_RECURSE engine_MODULES "engine/src/**.ixx")
 file(GLOB_RECURSE engine_HEADERS "engine/src/**.h")
 # Find ImGui source files
 file(GLOB imgui_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking/*.cpp")
@@ -71,10 +72,10 @@ function(assign_source_group)
 endfunction(assign_source_group)
 
 # Apply function to our files
-assign_source_group(${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
+assign_source_group(${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Source files
-target_sources(engine PRIVATE ${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
+target_sources(engine PRIVATE ${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Include files
 target_include_directories(engine PRIVATE 
