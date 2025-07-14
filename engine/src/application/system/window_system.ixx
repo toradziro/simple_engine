@@ -11,6 +11,7 @@ import engine_context;
 
 import <GLFW/glfw3.h>;
 
+//-------------------------------------------------------------------------------------------------
 export struct WindowInfo
 {
 	std::string					m_windowName;
@@ -19,9 +20,11 @@ export struct WindowInfo
 	std::function<void(Event&)>	m_eventCallback;
 };
 
+//-------------------------------------------------------------------------------------------------
 export class WindowSystem
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	WindowSystem(EngineContext& context, WindowInfo&& info) noexcept
 		: m_context(context)
 		, m_info(std::move(info))
@@ -156,6 +159,8 @@ public:
 				winInfo->m_eventCallback(wrappedEvent);
 			});
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	~WindowSystem() noexcept
 	{
 		auto& winManager = m_context.m_managerHolder.getManager<WindowManager>();
@@ -167,10 +172,13 @@ public:
 		}
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void	update(float dt)
 	{
 		glfwPollEvents();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void	onEvent(Event& event) const
 	{
 	}

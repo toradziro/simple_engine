@@ -19,6 +19,7 @@ import engine_context;
 export class Engine
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	Engine()
 	{
 		WindowInfo winInfo = {
@@ -49,11 +50,14 @@ public:
 		m_systemHolder.addSystem<RendererSystem>(m_context);
 		m_systemHolder.addSystem<EditorSystem>(m_context);
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	~Engine()
 	{
 	}
 
-	void	run()
+	//-------------------------------------------------------------------------------------------------
+	void run()
 	{
 		float lastFrameDt = 0.0f;
 

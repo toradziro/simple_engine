@@ -11,6 +11,7 @@ import <typeinfo>;
 
 import event_interface;
 
+//-------------------------------------------------------------------------------------------------
 template<typename System>
 std::string systemId()
 {
@@ -18,6 +19,7 @@ std::string systemId()
 	return typeName;
 }
 
+//-------------------------------------------------------------------------------------------------
 template <typename T>
 concept SystemConcept = requires(T obj, float dt, Event& event)
 {
@@ -25,30 +27,36 @@ concept SystemConcept = requires(T obj, float dt, Event& event)
 	obj.onEvent(event);
 };
 
+//-------------------------------------------------------------------------------------------------
 export class System
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	template <SystemConcept T, typename... Args>
 	explicit System(std::in_place_type_t<T>, Args&&... args)
 		: m_systemObject(std::make_unique<SystemObject<T>>(std::forward<Args>(args)...))
 	{}
 
+	//-------------------------------------------------------------------------------------------------
 	void update(float dt)
 	{
 		m_systemObject->update(dt);
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void onEvent(Event& event)
 	{
 		m_systemObject->onEvent(event);
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	std::string systemId() const
 	{
 		return m_systemObject->systemId();
 	}
 
 private:
+	//-------------------------------------------------------------------------------------------------
 	struct ISystem
 	{
 		virtual				~ISystem() = default;
@@ -57,22 +65,27 @@ private:
 		virtual void		onEvent(Event& event) = 0;
 	};
 
+	//-------------------------------------------------------------------------------------------------
 	template <SystemConcept T>
 	struct SystemObject final : ISystem
 	{
+		//-------------------------------------------------------------------------------------------------
 		template<typename... Args>
 		SystemObject(Args&&... args) : m_system(std::forward<Args>(args)...) {}
 
+		//-------------------------------------------------------------------------------------------------
 		virtual std::string systemId() const override
 		{
 			return ::systemId<T>();
 		}
 
+		//-------------------------------------------------------------------------------------------------
 		virtual void update(float dt) override
 		{
 			m_system.update(dt);
 		}
 
+		//-------------------------------------------------------------------------------------------------
 		virtual void onEvent(Event& event) override
 		{
 			m_system.onEvent(event);
@@ -85,13 +98,16 @@ private:
 	std::unique_ptr<ISystem> m_systemObject;
 };
 
+//-------------------------------------------------------------------------------------------------
 export struct SystemHolder
 {
+	//-------------------------------------------------------------------------------------------------
 	void addSystem(System&& system)
 	{
 		m_systems.push_back({ system.systemId(), std::move(system) });
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	template<typename SystemType, typename... Args>
 	void addSystem(Args&&... args)
 	{
@@ -101,10 +117,13 @@ export struct SystemHolder
 		);
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	auto begin()
 	{
 		return m_systems.begin();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	auto end()
 	{
 		return m_systems.end();

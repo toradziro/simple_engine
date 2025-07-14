@@ -10,10 +10,10 @@ import <imgui.h>;
 import <format>;
 
 import event_interface;
-//-- TODO: Move to cpp later when no need in test sprites will be
 import renderer_manager;
 import engine_context;
 
+//-------------------------------------------------------------------------------------------------
 void drawVec3Prop(glm::vec3& val, const std::string& propName)
 {
 	const std::string imGuiIdX = std::format("##{}float3x", propName);
@@ -55,13 +55,15 @@ void drawVec3Prop(glm::vec3& val, const std::string& propName)
 export class EditorSystem
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	EditorSystem(EngineContext& context) : m_engineContext(context)
 	{
 		m_firstSprite = { { 0.5f, 0.5f, 0.0f }, "images/nyan_cat.png" };
 		m_secondSprite = { { 0.0f, 0.0f, 0.0f }, "images/gg2.png" };
 	}
 
-	void	update(float dt)
+	//-------------------------------------------------------------------------------------------------
+	void update(float dt)
 	{
 		auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
 		rendererManager.addImGuiDrawCallback([this]()
@@ -74,11 +76,13 @@ public:
 		rendererManager.addSpriteToDrawList(m_secondSprite);
 	}
 
-	void	onEvent(Event& event) const {}
+	//-------------------------------------------------------------------------------------------------
+	void onEvent(Event& event) const {}
 
 
 private:
-	void	updateUI()
+	//-------------------------------------------------------------------------------------------------
+	void updateUI()
 	{
 		//-- Test integration
 		ImGui::Begin("Test Window");

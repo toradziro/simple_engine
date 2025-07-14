@@ -6,12 +6,12 @@ import <functional>;
 import <backends/imgui_impl_vulkan.h>;
 import <backends/imgui_impl_glfw.h>;
 
-//-- C version of interface only for capability with ImGui
 import <vulkan/vulkan.h>;
 import <GLFW/glfw3.h>;
 
 import event_interface;
 
+//-------------------------------------------------------------------------------------------------
 export struct ImGuiInitInfo
 {
 	uint32_t			m_apiVersion;
@@ -27,10 +27,13 @@ export struct ImGuiInitInfo
 	GLFWwindow*			m_window;
 };
 
+//-------------------------------------------------------------------------------------------------
 export class ImGuiIntegration
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	ImGuiIntegration() = default;
+	//-------------------------------------------------------------------------------------------------
 	ImGuiIntegration(ImGuiInitInfo& initInfo)
 	{
 		ImGui_ImplVulkan_InitInfo imGuiVulkanInitInfo = {
@@ -54,6 +57,7 @@ public:
 		setupStyle();
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void update(VkCommandBuffer commandBuffer, std::vector<std::function<void()>>& drawListImGuiUI)
 	{
 		ImGui_ImplVulkan_NewFrame();
@@ -113,6 +117,7 @@ public:
 		}
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void shutdown()
 	{
 		ImGui_ImplVulkan_Shutdown();
@@ -122,6 +127,7 @@ public:
 	}
 	
 private:
+	//-------------------------------------------------------------------------------------------------
 	void setupStyle()
 	{
 		ImGuiIO& io = ImGui::GetIO();

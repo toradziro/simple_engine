@@ -7,29 +7,57 @@ import <cassert>;
 import <algorithm>;
 import <ranges>;
 
+//-------------------------------------------------------------------------------------------------
 template<typename Manager>
 std::string managerId()
 {
 	return typeid(Manager).name();
 }
 
+//-------------------------------------------------------------------------------------------------
 export class Manager
 {
+public:
+	//-------------------------------------------------------------------------------------------------
+	template <typename T, typename... Args>
+	explicit Manager(std::in_place_type_t<T>, Args&&... args)
+		: m_managerObject(std::make_unique<ManagerObject<T>>(std::forward<Args>(args)...))
+	{
+	}
+
+	//-------------------------------------------------------------------------------------------------
+	template <typename T>
+	T& getUnderlyingManager()
+	{
+		auto managerObject = static_cast<ManagerObject<T>*>(m_managerObject.get());
+		return managerObject->m_manager;
+	}
+
+	//-------------------------------------------------------------------------------------------------
+	std::string managerId() const
+	{
+		return m_managerObject->managerId();
+	}
+
 private:
+	//-------------------------------------------------------------------------------------------------
 	struct IManager
 	{
 		virtual ~IManager() = default;
 		virtual std::string managerId() const = 0;
 	};
 
+	//-------------------------------------------------------------------------------------------------
 	template <typename T>
 	struct ManagerObject final : IManager
 	{
+		//-------------------------------------------------------------------------------------------------
 		template<typename... Args>
 		ManagerObject(Args&&... args) : m_manager(std::forward<Args>(args)...)
 		{
 		}
 
+		//-------------------------------------------------------------------------------------------------
 		virtual std::string managerId() const override
 		{
 			return ::managerId<T>();
@@ -38,36 +66,20 @@ private:
 		T m_manager;
 	};
 
-public:
-	template <typename T, typename... Args>
-	explicit Manager(std::in_place_type_t<T>, Args&&... args)
-		: m_managerObject(std::make_unique<ManagerObject<T>>(std::forward<Args>(args)...))
-	{
-	}
-
-	template <typename T>
-	T& getUnderlyingManager()
-	{
-		auto managerObject = static_cast<ManagerObject<T>*>(m_managerObject.get());
-		return managerObject->m_manager;
-	}
-
-	std::string managerId() const
-	{
-		return m_managerObject->managerId();
-	}
-
 private:
 	std::unique_ptr<IManager> m_managerObject;
 };
 
+//-------------------------------------------------------------------------------------------------
 export struct ManagerHolder
 {
+	//-------------------------------------------------------------------------------------------------
 	void addManager(Manager&& manager)
 	{
 		m_managers.insert({ manager.managerId(), std::move(manager) });
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	template<typename ManagerType, typename... Args>
 	void addManager(Args&&... args)
 	{
@@ -77,6 +89,7 @@ export struct ManagerHolder
 			});
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	template<typename T>
 	T& getManager()
 	{

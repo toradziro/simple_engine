@@ -8,12 +8,15 @@ export module vulkan_texture;
 import <string>;
 import <vector>;
 
-import graphic_device;
 import <vulkan/vulkan.hpp>;
 
+import graphic_device;
+
+//-------------------------------------------------------------------------------------------------
 export class VulkanTexture
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	VulkanTexture(const std::string& path, VkGraphicDevice* device) :
 		m_device(device)
 	{
@@ -26,26 +29,34 @@ public:
 		createVulkanResources();
 		createDescriptorSet();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	~VulkanTexture()
 	{
 		cleanup();
 	}
 
-	uint32_t			getWidth() const { return m_width; }
-	uint32_t			getHeight() const { return m_height; }
-	const std::string&	getPath() const { return m_path; }
-	size_t				getMemoryUsage() const
-	{
-		return size_t();
-	}
+	//-------------------------------------------------------------------------------------------------
+	uint32_t getWidth() const { return m_width; }
+	//-------------------------------------------------------------------------------------------------
+	uint32_t getHeight() const { return m_height; }
+	//-------------------------------------------------------------------------------------------------
+	const std::string& getPath() const { return m_path; }
+	//-------------------------------------------------------------------------------------------------
+	size_t getMemoryUsage() const { return size_t(); }
 
-	bool				isValid() const { return m_image != VK_NULL_HANDLE; }
+	//-------------------------------------------------------------------------------------------------
+	bool isValid() const { return m_image != VK_NULL_HANDLE; }
 
-	vk::Image			getVkImage() const { return m_image; }
-	vk::ImageView		getVkImageView() const { return m_imageView; }
-	vk::DescriptorSet	getDescriptorSet() const { return m_descriptorSet; }
+	//-------------------------------------------------------------------------------------------------
+	vk::Image getVkImage() const { return m_image; }
+	//-------------------------------------------------------------------------------------------------
+	vk::ImageView getVkImageView() const { return m_imageView; }
+	//-------------------------------------------------------------------------------------------------
+	vk::DescriptorSet getDescriptorSet() const { return m_descriptorSet; }
 
 private:
+	//-------------------------------------------------------------------------------------------------
 	void loadFromFile(const std::string& path)
 	{
 		int width, height, channels;
@@ -66,6 +77,8 @@ private:
 
 		stbi_image_free(pixels);
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void createVulkanResources()
 	{
 		VkDeviceSize imageSize = m_pixelData.size();
@@ -139,10 +152,14 @@ private:
 		m_pixelData.clear();
 		m_pixelData.shrink_to_fit();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void createDescriptorSet()
 	{
 		m_descriptorSet = m_device->createTextureDescriptorSet(m_image, m_imageView);
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void cleanup()
 	{
 		if (m_device && m_device->getLogicalDevice())

@@ -10,9 +10,6 @@ module;
 
 export module graphic_device;
 
-import <backends/imgui_impl_vulkan.h>;
-import <backends/imgui_impl_glfw.h>;
-
 import <vector>;
 import <array>;
 import <memory>;
@@ -30,11 +27,15 @@ import <shaderc/shaderc.hpp>;
 import <cstdlib>;
 import <print>;
 
+import <backends/imgui_impl_vulkan.h>;
+import <backends/imgui_impl_glfw.h>;
+
 import renderer_manager;
 import imgui_integration;
 
 constexpr int	C_MAX_FRAMES_IN_FLIGHT = 2;
 
+//-------------------------------------------------------------------------------------------------
 //-- Helper functions, maybe need to move in an another module
 std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 	shaderc_shader_kind kind,
@@ -53,6 +54,7 @@ std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 	return { result.cbegin(), result.cend() };
 }
 
+//-------------------------------------------------------------------------------------------------
 std::string readFile(const std::string& path)
 {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -72,6 +74,7 @@ std::string readFile(const std::string& path)
 	return buffer;
 }
 
+//-------------------------------------------------------------------------------------------------
 vk::VertexInputBindingDescription getBindingDescription()
 {
 	vk::VertexInputBindingDescription bindingDescription = {};
@@ -81,6 +84,7 @@ vk::VertexInputBindingDescription getBindingDescription()
 	return bindingDescription;
 }
 
+//-------------------------------------------------------------------------------------------------
 std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions()
 {
 	std::array<vk::VertexInputAttributeDescription, 3> attributeDescriptions = {};
@@ -102,6 +106,7 @@ std::array<vk::VertexInputAttributeDescription, 3> getAttributeDescriptions()
 	return attributeDescriptions;
 }
 
+//-------------------------------------------------------------------------------------------------
 struct QueueFamilies
 {
 	int	m_graphicQueue = -1;
@@ -114,18 +119,21 @@ struct QueueFamilies
 	}
 };
 
+//-------------------------------------------------------------------------------------------------
 struct Queues
 {
 	vk::Queue	m_graphicQueue;
 	vk::Queue	m_presentationQueue;
 };
 
+//-------------------------------------------------------------------------------------------------
 struct SwapchainImage
 {
 	vk::Image		m_image = VK_NULL_HANDLE;
 	vk::ImageView	m_imageView = VK_NULL_HANDLE;
 };
 
+//-------------------------------------------------------------------------------------------------
 struct SwapChainDetails
 {
 	//-- Surface props such as size and buffer images count
@@ -136,6 +144,7 @@ struct SwapChainDetails
 	std::vector<vk::PresentModeKHR>		m_presentMode;
 };
 
+//-------------------------------------------------------------------------------------------------
 struct PhysicalDeviceData
 {
 	int					m_score = 0;
@@ -143,18 +152,21 @@ struct PhysicalDeviceData
 	SwapChainDetails	m_swapchainDetails;
 };
 
+//-------------------------------------------------------------------------------------------------
 struct UniformBufferObject
 {
 	glm::mat4	m_view;
 	glm::mat4	m_proj;
 };
 
+//-------------------------------------------------------------------------------------------------
 struct VulkanBufferMemory
 {
 	vk::Buffer			m_buffer;
 	vk::DeviceMemory	m_bufferMem;
 };
 
+//-------------------------------------------------------------------------------------------------
 export struct TexturedGeometry
 {
 	VulkanBufferMemory	m_memory;
@@ -165,14 +177,17 @@ export struct TexturedGeometry
 export using TexturedGeometryBatch = std::vector<TexturedGeometry>;
 export using BatchIndecies = std::vector<VulkanBufferMemory>;
 
+//-------------------------------------------------------------------------------------------------
 export class VkGraphicDevice
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	~VkGraphicDevice()
 	{
 		shutdown();
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void init(GLFWwindow* window)
 	{
 		assert(window != nullptr);
@@ -239,6 +254,8 @@ public:
 			throw; // Re-throw to allow proper cleanup
 		}
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void shutdown()
 	{
 		m_imGuiIntegration.shutdown();
@@ -279,12 +296,15 @@ public:
 		m_vkInstance.destroySurfaceKHR(m_surface);
 		m_vkInstance.destroy();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void resizedWindow()
 	{
 		m_framebufferResized = true;
 	}
 
-	void	beginFrame(float /*dt*/)
+	//-------------------------------------------------------------------------------------------------
+	void beginFrame(float /*dt*/)
 	{
 		auto res = m_logicalDevice.waitForFences(m_inFlightFences[m_currFrame]
 			, vk::True
@@ -310,7 +330,9 @@ public:
 
 		m_commandBuffers[m_currFrame].reset();
 	}
-	void	endFrame(const TexturedGeometryBatch& geometryBatch, const BatchIndecies& indicesBatch)
+
+	//-------------------------------------------------------------------------------------------------
+	void endFrame(const TexturedGeometryBatch& geometryBatch, const BatchIndecies& indicesBatch)
 	{
 		recordCommandBuffer(m_commandBuffers[m_currFrame]
 			, m_currImageIndex
@@ -360,7 +382,8 @@ public:
 		m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
 	}
 
-	auto	createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory
+	//-------------------------------------------------------------------------------------------------
+	auto createIndexBuffer(uint16_t spriteCount) -> VulkanBufferMemory
 	{
 		std::vector<uint16_t> indicies;
 		indicies.resize(spriteCount * 6);
@@ -413,13 +436,16 @@ public:
 
 		return resultMemory;
 	}
-	void	clearBuffer(VulkanBufferMemory memory)
+
+	//-------------------------------------------------------------------------------------------------
+	void clearBuffer(VulkanBufferMemory memory)
 	{
 		m_logicalDevice.destroyBuffer(memory.m_buffer);
 		m_logicalDevice.freeMemory(memory.m_bufferMem);
 	}
 
-	VulkanBufferMemory	createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites)
+	//-------------------------------------------------------------------------------------------------
+	VulkanBufferMemory createCombinedVertexBuffer(const std::vector<std::array<VertexData, 4>>& sprites)
 	{
 		size_t totalVertices = sprites.size() * 4;
 		auto bufferSize = totalVertices * sizeof(VertexData);
@@ -458,21 +484,26 @@ public:
 		return resultMemory;
 	}
 	
-	uint8_t	maxFrames() const
+	//-------------------------------------------------------------------------------------------------
+	uint8_t maxFrames() const
 	{
 		return C_MAX_FRAMES_IN_FLIGHT;
 	}
-	uint8_t	currFrame() const
+
+	//-------------------------------------------------------------------------------------------------
+	uint8_t currFrame() const
 	{
 		return m_currFrame;
 	}
 
-	void	waitGraphicIdle()
+	//-------------------------------------------------------------------------------------------------
+	void waitGraphicIdle()
 	{
 		m_queues.m_graphicQueue.waitIdle();
 	}
 
-	void	updateUniformBuffer()
+	//-------------------------------------------------------------------------------------------------
+	void updateUniformBuffer()
 	{
 		int w = 0, h = 0;
 		glfwGetFramebufferSize(m_window, &w, &h);
@@ -494,7 +525,8 @@ public:
 		memcpy(m_uniformBuffersMapped[m_currFrame], &ubo, sizeof(UniformBufferObject));
 	}
 
-	uint32_t	findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+	//-------------------------------------------------------------------------------------------------
+	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 	{
 		vk::PhysicalDeviceMemoryProperties physDeviceMemProps = m_physicalDevice.getMemoryProperties();
 		for (uint32_t i = 0; i < physDeviceMemProps.memoryTypeCount; ++i)
@@ -509,9 +541,14 @@ public:
 		return 0;
 	}
 
-	vk::Device&	getLogicalDevice() { return m_logicalDevice; }
+	//-------------------------------------------------------------------------------------------------
+	vk::Device&	getLogicalDevice()
+	{
+		return m_logicalDevice;
+	}
 
-	void	createVkInstance()
+	//-------------------------------------------------------------------------------------------------
+	void createVkInstance()
 	{
 		//-- Instance creation info will need info about application
 		//-- Most info here for developer
@@ -529,11 +566,11 @@ public:
 		std::vector<const char*> instanceextensions;
 
 		uint32_t extensionsCount = 0;
-		const char** glfwextensionsList = glfwGetRequiredInstanceExtensions(&extensionsCount);
+		const char** glfwExtensionsList = glfwGetRequiredInstanceExtensions(&extensionsCount);
 		instanceextensions.reserve(extensionsCount);
 		for (uint32_t i = 0; i < extensionsCount; ++i)
 		{
-			instanceextensions.push_back(glfwextensionsList[i]);
+			instanceextensions.push_back(glfwExtensionsList[i]);
 		}
 
 		//-- Check if all requested extensions supported
@@ -560,7 +597,9 @@ public:
 		//-- Create instance
 		m_vkInstance = vk::createInstance(createInfo);
 	}
-	void	createLogicalDevice()
+
+	//-------------------------------------------------------------------------------------------------
+	void createLogicalDevice()
 	{
 		//-- Vector for queue creation information and set to avoid duplication same queue
 		std::vector<vk::DeviceQueueCreateInfo> queuesCreateInfos;
@@ -598,14 +637,18 @@ public:
 			, 0
 			, &m_queues.m_presentationQueue);
 	}
-	void	createSurface()
+
+	//-------------------------------------------------------------------------------------------------
+	void createSurface()
 	{
 		VkSurfaceKHR rawSurface = {};
 		VkResult result = glfwCreateWindowSurface(m_vkInstance, m_window, nullptr, &rawSurface);
 		assert(result == VK_SUCCESS);
 		m_surface = vk::SurfaceKHR(rawSurface);
 	}
-	void	recreateSwapChain()
+
+	//-------------------------------------------------------------------------------------------------
+	void recreateSwapChain()
 	{
 		m_logicalDevice.waitIdle();
 
@@ -618,7 +661,9 @@ public:
 		createSwapchain();
 		createFramebuffer();
 	}
-	void	createSwapchain()
+
+	//-------------------------------------------------------------------------------------------------
+	void createSwapchain()
 	{
 		const SwapChainDetails& swaphainDetails = m_physicalDeviceData.m_swapchainDetails;
 
@@ -676,7 +721,9 @@ public:
 		m_presentMode = presentMode;
 		m_imageExtent = extent;
 	}
-	void	createShaderModule()
+
+	//-------------------------------------------------------------------------------------------------
+	void createShaderModule()
 	{
 		constexpr auto C_V_SHADER = "shaders/hello.vert";
 		constexpr auto C_F_SHADER = "shaders/hello.frag";
@@ -711,7 +758,9 @@ public:
 
 		m_fragmentShaderModule = m_logicalDevice.createShaderModule(fragmentShaderModuleCreateInfo);
 	}
-	void	createDescriptorSetLayout()
+
+	//-------------------------------------------------------------------------------------------------
+	void createDescriptorSetLayout()
 	{
 		{
 			vk::DescriptorSetLayoutBinding uniformLayoutBinding = {};
@@ -743,7 +792,9 @@ public:
 			}
 		}
 	}
-	void	createPipeline()
+
+	//-------------------------------------------------------------------------------------------------
+	void createPipeline()
 	{
 		vk::PipelineShaderStageCreateInfo vertexShaderStageCreateInfo = {};
 		vertexShaderStageCreateInfo.setStage(vk::ShaderStageFlagBits::eVertex)
@@ -863,7 +914,9 @@ public:
 			, nullptr
 			, &m_graphicsPipeline);
 	}
-	void	createRenderPass()
+
+	//-------------------------------------------------------------------------------------------------
+	void createRenderPass()
 	{
 		vk::AttachmentDescription colorAttachment = {};
 		colorAttachment.setFormat(m_surfaceFormat.format)
@@ -901,7 +954,9 @@ public:
 
 		m_renderPass = m_logicalDevice.createRenderPass(renderPassInfo);
 	}
-	void	createFramebuffer()
+
+	//-------------------------------------------------------------------------------------------------
+	void createFramebuffer()
 	{
 		m_swapChainFramebuffers.resize(m_swapchainImages.size());
 		int i = 0;
@@ -921,7 +976,9 @@ public:
 			++i;
 		}
 	}
-	void	createCommandPool()
+
+	//-------------------------------------------------------------------------------------------------
+	void createCommandPool()
 	{
 		vk::CommandPoolCreateInfo poolInfo = {};
 		poolInfo.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
@@ -929,7 +986,9 @@ public:
 
 		m_commandPool = m_logicalDevice.createCommandPool(poolInfo);
 	}
-	void	createTextureSampler()
+
+	//-------------------------------------------------------------------------------------------------
+	void createTextureSampler()
 	{
 		const auto props = m_physicalDevice.getProperties();
 		const auto maxAnisotropy = props.limits.maxSamplerAnisotropy;
@@ -952,7 +1011,9 @@ public:
 
 		m_textureSampler = m_logicalDevice.createSampler(createInfo);
 	}
-	void	createUniformBuffers()
+
+	//-------------------------------------------------------------------------------------------------
+	void createUniformBuffers()
 	{
 		auto bufferSize = sizeof(UniformBufferObject);
 
@@ -975,7 +1036,9 @@ public:
 				&m_uniformBuffersMapped[i]);
 		}
 	}
-	void	createDescriptorPool()
+
+	//-------------------------------------------------------------------------------------------------
+	void createDescriptorPool()
 	{
 		std::array<vk::DescriptorPoolSize, 2> poolSizes = {};
 		poolSizes[0].setDescriptorCount(C_MAX_FRAMES_IN_FLIGHT)
@@ -991,7 +1054,9 @@ public:
 
 		m_descriptorPool = m_logicalDevice.createDescriptorPool(createInfo);
 	}
-	void	createDescriptorsSets()
+
+	//-------------------------------------------------------------------------------------------------
+	void createDescriptorsSets()
 	{
 		std::vector<vk::DescriptorSetLayout> layouts(C_MAX_FRAMES_IN_FLIGHT, m_uniformsSetLayout);
 		vk::DescriptorSetAllocateInfo allocInfo = {};
@@ -1017,11 +1082,15 @@ public:
 			m_logicalDevice.updateDescriptorSets(descriptorsWrite, {});
 		}
 	}
-	void	freeDescriptorSetFromPool(vk::DescriptorSet& descriptorSet)
+
+	//-------------------------------------------------------------------------------------------------
+	void freeDescriptorSetFromPool(vk::DescriptorSet& descriptorSet)
 	{
 		m_logicalDevice.freeDescriptorSets(m_descriptorPool, descriptorSet);
 	}
-	void	createCommandBuffer()
+
+	//-------------------------------------------------------------------------------------------------
+	void createCommandBuffer()
 	{
 		vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
 		commandBufferAllocateInfo.setCommandBufferCount(C_MAX_FRAMES_IN_FLIGHT)
@@ -1030,7 +1099,9 @@ public:
 
 		m_commandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
 	}
-	void	createSyncObjects()
+
+	//-------------------------------------------------------------------------------------------------
+	void createSyncObjects()
 	{
 		m_imageAvailableSemaphores.reserve(C_MAX_FRAMES_IN_FLIGHT);
 		m_renderFinishedSemaphores.reserve(C_MAX_FRAMES_IN_FLIGHT);
@@ -1047,7 +1118,9 @@ public:
 		}
 
 	}
-	void	setupPhysicalDevice()
+
+	//-------------------------------------------------------------------------------------------------
+	void setupPhysicalDevice()
 	{
 		auto physDevices = m_vkInstance.enumeratePhysicalDevices();
 
@@ -1079,7 +1152,9 @@ public:
 		assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
 	}
 
-	vk::DescriptorSet	createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView)
+
+	//-------------------------------------------------------------------------------------------------
+	vk::DescriptorSet createTextureDescriptorSet(vk::Image& image, vk::ImageView& imageView)
 	{
 		vk::DescriptorSetAllocateInfo allocInfo = {};
 		allocInfo.setDescriptorPool(m_descriptorPool)
@@ -1106,7 +1181,8 @@ public:
 		return allocatedDescriptors[0];
 	}
 
-	void	recordCommandBuffer(vk::CommandBuffer commandBuffer
+	//-------------------------------------------------------------------------------------------------
+	void recordCommandBuffer(vk::CommandBuffer commandBuffer
 		, uint32_t imageIndex
 		, const TexturedGeometryBatch& geometryBatch
 		, const BatchIndecies& indicesBatch)
@@ -1159,7 +1235,8 @@ public:
 		commandBuffer.end();
 	}
 
-	void	checkExtensionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
+	//-------------------------------------------------------------------------------------------------
+	void checkExtensionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
 	{
 		auto extensionsProps = vk::enumerateInstanceExtensionProperties();
 		for (const char* extension : instanceExtentionsAppNeed)
@@ -1175,7 +1252,9 @@ public:
 			assert(itRes != extensionsProps.end());
 		}
 	}
-	void	checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
+
+	//-------------------------------------------------------------------------------------------------
+	void checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
 	{
 		auto availableLayers = vk::enumerateInstanceLayerProperties();
 
@@ -1192,7 +1271,9 @@ public:
 			assert(itRes != availableLayers.end());
 		}
 	}
-	[[nodiscard]] bool	checkDeviceExtensionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
+
+	//-------------------------------------------------------------------------------------------------
+	bool checkDeviceExtensionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
 	{
 		auto extensionsProps = physicalDevice.enumerateDeviceExtensionProperties();
 
@@ -1214,7 +1295,8 @@ public:
 		return true;
 	}
 
-	[[nodiscard]] auto	checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const -> PhysicalDeviceData
+	//-------------------------------------------------------------------------------------------------
+	PhysicalDeviceData checkIfPhysicalDeviceSuitable(vk::PhysicalDevice device) const
 	{
 		PhysicalDeviceData data;
 
@@ -1248,7 +1330,9 @@ public:
 
 		return data;
 	}
-	[[nodiscard]] auto	checkQueueFamilies(vk::PhysicalDevice device) const -> QueueFamilies
+
+	//-------------------------------------------------------------------------------------------------
+	QueueFamilies checkQueueFamilies(vk::PhysicalDevice device) const
 	{
 		QueueFamilies queueFamilies = {};
 		std::vector<vk::QueueFamilyProperties> queueFamilyProps = device.getQueueFamilyProperties();
@@ -1282,7 +1366,9 @@ public:
 
 		return queueFamilies;
 	}
-	[[nodiscard]] auto	swapchainDetails(vk::PhysicalDevice device) const -> SwapChainDetails
+
+	//-------------------------------------------------------------------------------------------------
+	SwapChainDetails swapchainDetails(vk::PhysicalDevice device) const
 	{
 		SwapChainDetails details;
 
@@ -1292,7 +1378,8 @@ public:
 		return details;
 	}
 
-	auto	chooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& supportedFormats) -> vk::SurfaceFormatKHR
+	//-------------------------------------------------------------------------------------------------
+	vk::SurfaceFormatKHR chooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& supportedFormats)
 	{
 		for (const auto& availableFormat : supportedFormats)
 		{
@@ -1304,7 +1391,9 @@ public:
 		}
 		return supportedFormats[0];
 	}
-	auto	choosePresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) -> vk::PresentModeKHR
+
+	//-------------------------------------------------------------------------------------------------
+	vk::PresentModeKHR choosePresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
 	{
 		//-- Looking for MAILBOX (best for games)
 		//-- Tripple buffering, update on vertical blank and no tearing can be observed
@@ -1319,7 +1408,9 @@ public:
 		//-- "This is the only value of presentMode that is required to be supported."
 		return vk::PresentModeKHR::eFifo;
 	}
-	auto	chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities) -> vk::Extent2D
+
+	//-------------------------------------------------------------------------------------------------
+	vk::Extent2D chooseSwapChainExtent(const vk::SurfaceCapabilitiesKHR& capabilities)
 	{
 		//-- If currExtent is max - than it will be handeled by surface
 		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
@@ -1341,7 +1432,8 @@ public:
 		return ret;
 	}
 
-	auto	createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags) -> vk::ImageView
+	//-------------------------------------------------------------------------------------------------
+	vk::ImageView createImageView(vk::Image image, vk::Format format, vk::ImageAspectFlags aspectFlags)
 	{
 		vk::ImageViewCreateInfo createInfo = {};
 		createInfo.setImage(image)
@@ -1357,7 +1449,8 @@ public:
 		return m_logicalDevice.createImageView(createInfo);
 	}
 
-	void	createBuffer(vk::DeviceSize size
+	//-------------------------------------------------------------------------------------------------
+	void createBuffer(vk::DeviceSize size
 		, vk::BufferUsageFlags usageFlags
 		, vk::MemoryPropertyFlags memPropFlags
 		, vk::Buffer& buffer
@@ -1381,7 +1474,8 @@ public:
 		m_logicalDevice.bindBufferMemory(buffer, deviceMemory, 0);
 	}
 
-	void	transitionImage(vk::Image image
+	//-------------------------------------------------------------------------------------------------
+	void transitionImage(vk::Image image
 		, vk::Format format
 		, vk::ImageLayout oldLayout
 		, vk::ImageLayout newLayout)
@@ -1428,7 +1522,8 @@ public:
 		endSingleTimeCommand(commandBuffer);
 	}
 
-	void	copyBufferToImage(vk::Buffer buffer
+	//-------------------------------------------------------------------------------------------------
+	void copyBufferToImage(vk::Buffer buffer
 		, vk::Image image
 		, uint32_t width
 		, uint32_t height)
@@ -1451,7 +1546,8 @@ public:
 		endSingleTimeCommand(commandBuffer);
 	}
 
-	void	copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
+	//-------------------------------------------------------------------------------------------------
+	void copyBuffer(vk::Buffer srcBuffer, vk::Buffer dstBuffer, vk::DeviceSize size)
 	{
 		auto commandBuffer = beginSingleTimeCommands();
 
@@ -1465,7 +1561,8 @@ public:
 		endSingleTimeCommand(commandBuffer);
 	}
 
-	auto	beginSingleTimeCommands() -> vk::CommandBuffer
+	//-------------------------------------------------------------------------------------------------
+	vk::CommandBuffer beginSingleTimeCommands()
 	{
 		vk::CommandBufferAllocateInfo allocateInfo = {};
 		allocateInfo.setLevel(vk::CommandBufferLevel::ePrimary)
@@ -1482,7 +1579,9 @@ public:
 		commandBuffer.begin(beginInfo);
 		return commandBuffer;
 	}
-	void	endSingleTimeCommand(vk::CommandBuffer commandBuffer)
+
+	//-------------------------------------------------------------------------------------------------
+	void endSingleTimeCommand(vk::CommandBuffer commandBuffer)
 	{
 		commandBuffer.end();
 
@@ -1496,7 +1595,8 @@ public:
 		m_logicalDevice.freeCommandBuffers(m_commandPool, { commandBuffer });
 	}
 
-	void	cleanupSwapchain()
+	//-------------------------------------------------------------------------------------------------
+	void cleanupSwapchain()
 	{
 		for (auto& framebuffer : m_swapChainFramebuffers)
 		{
@@ -1509,21 +1609,35 @@ public:
 		m_logicalDevice.destroySwapchainKHR(m_swapchain);
 	}
 
-	void	setMaxTextures(uint32_t maxPossibleTextures) { m_maxTextures = maxPossibleTextures; }
+	//-------------------------------------------------------------------------------------------------
+	void setMaxTextures(uint32_t maxPossibleTextures)
+	{
+		m_maxTextures = maxPossibleTextures;
+	}
 
 	//-- Info getters
-	uint32_t				apiVersion() const { return m_apiVersion; }
-	uint32_t				getGraphicQueueFamily() const { return m_physicalDeviceData.m_queueFamilies.m_graphicQueue; }
-	uint32_t				minImageCount() const { return m_swapchainImages.size(); }
-	uint32_t				imageCount() const { return m_swapchainImages.size(); }
-	vk::Instance			instance() const { return m_vkInstance; }
-	vk::PhysicalDevice		physicalDevice() const { return m_physicalDevice; }
-	vk::Device				device() const { return m_logicalDevice; }
-	vk::Queue				graphicQueue() const { return m_queues.m_graphicQueue; }
-	vk::DescriptorPool		descriptorPool() const { return m_descriptorPool; }
-	vk::RenderPass			renderPass() const { return m_renderPass; }
+	//-------------------------------------------------------------------------------------------------
+	uint32_t apiVersion() const { return m_apiVersion; }
+	//-------------------------------------------------------------------------------------------------
+	uint32_t getGraphicQueueFamily() const { return m_physicalDeviceData.m_queueFamilies.m_graphicQueue; }
+	//-------------------------------------------------------------------------------------------------
+	uint32_t minImageCount() const { return m_swapchainImages.size(); }
+	//-------------------------------------------------------------------------------------------------
+	uint32_t imageCount() const { return m_swapchainImages.size(); }
+	//-------------------------------------------------------------------------------------------------
+	vk::Instance instance() const { return m_vkInstance; }
+	//-------------------------------------------------------------------------------------------------
+	vk::PhysicalDevice physicalDevice() const { return m_physicalDevice; }
+	//-------------------------------------------------------------------------------------------------
+	vk::Device device() const { return m_logicalDevice; }
+	//-------------------------------------------------------------------------------------------------
+	vk::Queue graphicQueue() const { return m_queues.m_graphicQueue; }
+	//-------------------------------------------------------------------------------------------------
+	vk::DescriptorPool descriptorPool() const { return m_descriptorPool; }
+	//-------------------------------------------------------------------------------------------------
+	vk::RenderPass renderPass() const { return m_renderPass; }
 
-	void					setImGuiDrawCallbacks(std::vector<RendererManager::ImGuiDrawCallback>& imGuiDrawCallbacks)
+	void setImGuiDrawCallbacks(std::vector<RendererManager::ImGuiDrawCallback>& imGuiDrawCallbacks)
 	{
 		m_imGuiDrawCallbacks = imGuiDrawCallbacks;
 	}

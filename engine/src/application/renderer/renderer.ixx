@@ -24,6 +24,7 @@ import window_manager;
 import engine_context;
 import vulkan_texture;
 
+//-------------------------------------------------------------------------------------------------
 constexpr std::array<VertexData, 4> C_QUAD_BASIC_DATA =
 {
 	VertexData{{-0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
@@ -32,6 +33,7 @@ constexpr std::array<VertexData, 4> C_QUAD_BASIC_DATA =
 	VertexData{{-0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
 };
 
+//-------------------------------------------------------------------------------------------------
 struct TexuredSpriteBatch
 {
 	std::vector<std::array<VertexData, 4>>	m_geometryBatch;
@@ -39,11 +41,14 @@ struct TexuredSpriteBatch
 	uint32_t								m_spritesCount;
 };
 
+//-------------------------------------------------------------------------------------------------
 class TextureCache
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	TextureCache(VkGraphicDevice& graphicDevice) : m_graphicDevice(graphicDevice) {}
 
+	//-------------------------------------------------------------------------------------------------
 	VulkanTexture* loadTexture(const std::string& texturePath)
 	{
 		if (m_texturesMap.count(texturePath))
@@ -70,11 +75,14 @@ private:
 class BatchDrawer
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	BatchDrawer(VkGraphicDevice& graphicDevice) : m_graphicDevice(graphicDevice)
 	{
 		m_vertexBuffersToFrames.resize(m_graphicDevice.maxFrames());
 		m_indexBuffersToFrames.resize(m_graphicDevice.maxFrames());
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	~BatchDrawer()
 	{
 		for (uint32_t i = 0; i < m_graphicDevice.maxFrames(); ++i)
@@ -83,7 +91,8 @@ public:
 		}
 	}
 
-	void	draw(const std::vector<TexuredSpriteBatch>& spriteBatches)
+	//-------------------------------------------------------------------------------------------------
+	void draw(const std::vector<TexuredSpriteBatch>& spriteBatches)
 	{
 		const auto currFrameIndex = m_graphicDevice.currFrame();
 
@@ -114,7 +123,8 @@ public:
 	}
 
 private:
-	void	clearBuffers(uint8_t frameIndex)
+	//-------------------------------------------------------------------------------------------------
+	void clearBuffers(uint8_t frameIndex)
 	{
 		auto& currentTexturedGeometryBatch = m_vertexBuffersToFrames[frameIndex];
 		auto& currentIndexBatch = m_indexBuffersToFrames[frameIndex];
@@ -144,9 +154,11 @@ private:
 	std::vector<BatchIndecies>			m_indexBuffersToFrames;
 };
 
+//-------------------------------------------------------------------------------------------------
 export class RendererSystem
 {
 public:
+	//-------------------------------------------------------------------------------------------------
 	RendererSystem(EngineContext& context)
 		: m_engineContext(context)
 	{
@@ -162,17 +174,22 @@ public:
 			throw;
 		}
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	~RendererSystem()
 	{
 		m_device.waitGraphicIdle();
 		m_batchDrawer.reset();
 	}
 
+	//-------------------------------------------------------------------------------------------------
 	void update(float dt)
 	{
 		beginFrame(dt);
 		endFrame();
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void onEvent(Event& event)
 	{
 		if (eventTypeCheck<WindowResizeEvent>(event))
@@ -189,6 +206,8 @@ public:
 		//-- 	std::println("Mouse moved: {} {}", mouseMoved.m_mouseX, mouseMoved.m_mouseY);
 		//-- }
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void beginFrame(float dt)
 	{
 		try
@@ -201,6 +220,8 @@ public:
 			throw;
 		}
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void endFrame()
 	{
 		try
@@ -225,9 +246,12 @@ public:
 			throw;
 		}
 	}
+
+	//-------------------------------------------------------------------------------------------------
 	void resizedWindow() { m_device.resizedWindow(); }
 
 private:
+	//-------------------------------------------------------------------------------------------------
 	void batchSprites()
 	{
 		auto& sprites = m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites;
