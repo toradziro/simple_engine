@@ -8,6 +8,7 @@ import event_interface;
 import window_manager;
 import event_interface;
 import engine_context;
+import engine_assert;
 
 import <GLFW/glfw3.h>;
 
@@ -30,7 +31,7 @@ public:
 		, m_info(std::move(info))
 	{
 		auto res = glfwInit();
-		assert(res);
+		engineAssert(res, "Glfw was not able to init");
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 

@@ -11,6 +11,7 @@ import <vector>;
 import <vulkan/vulkan.hpp>;
 
 import graphic_device;
+import engine_assert;
 
 //-------------------------------------------------------------------------------------------------
 export class VulkanTexture
@@ -20,10 +21,7 @@ public:
 	VulkanTexture(const std::string& path, VkGraphicDevice* device) :
 		m_device(device)
 	{
-		if (!m_device)
-		{
-			assert(false);
-		}
+		engineAssert(m_device != nullptr, "Device is not initialized yet");
 
 		loadFromFile(path);
 		createVulkanResources();

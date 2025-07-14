@@ -7,6 +7,8 @@ import <cassert>;
 import <algorithm>;
 import <ranges>;
 
+import engine_assert;
+
 //-------------------------------------------------------------------------------------------------
 template<typename Manager>
 std::string managerId()
@@ -84,8 +86,8 @@ export struct ManagerHolder
 	void addManager(Args&&... args)
 	{
 		m_managers.insert({
-			managerId<ManagerType>(),
-			Manager{ std::in_place_type<ManagerType>, std::forward<Args>(args)... }
+				managerId<ManagerType>(),
+				Manager{ std::in_place_type<ManagerType>, std::forward<Args>(args)... }
 			});
 	}
 
@@ -93,9 +95,9 @@ export struct ManagerHolder
 	template<typename T>
 	T& getManager()
 	{
-		auto managerIdStr = managerId<T>();
+		const auto managerIdStr = managerId<T>();
 
-		assert(m_managers.count(managerIdStr));
+		engineAssert(m_managers.count(managerIdStr), std::format("Manager {} is not known", managerIdStr));
 		return m_managers.at(managerIdStr).getUnderlyingManager<T>();
 	}
 

@@ -13,7 +13,6 @@ export module graphic_device;
 import <vector>;
 import <array>;
 import <memory>;
-import <cassert>;
 import <ranges>;
 import <set>;
 import <string>;
@@ -26,12 +25,15 @@ import <fstream>;
 import <shaderc/shaderc.hpp>;
 import <cstdlib>;
 import <print>;
+import <format>;
+import <numeric>;
 
 import <backends/imgui_impl_vulkan.h>;
 import <backends/imgui_impl_glfw.h>;
 
 import renderer_manager;
 import imgui_integration;
+import engine_assert;
 
 constexpr int	C_MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -48,7 +50,8 @@ std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 
 	auto result = compiler.CompileGlslToSpv(source, kind, name.c_str(), options);
 
-	assert(result.GetCompilationStatus() == shaderc_compilation_status_success);
+	engineAssert(result.GetCompilationStatus() == shaderc_compilation_status_success
+		, std::format("Shader: '{}' compilation failed", name));
 
 	// Spirv binary code
 	return { result.cbegin(), result.cend() };
@@ -58,7 +61,8 @@ std::vector<uint32_t> compileShaderFromSource(const std::string& source,
 std::string readFile(const std::string& path)
 {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
-	assert(file && file.is_open());
+	engineAssert(file && file.is_open()
+		, std::format("Wasn't able to open file: '{}'", path));
 
 	std::streamsize size = file.tellg();
 	file.seekg(0, std::ios::beg);
@@ -68,7 +72,7 @@ std::string readFile(const std::string& path)
 
 	if (!file.read(buffer.data(), size))
 	{
-		assert(false);
+		engineAssert(false, std::format("Wasn't able to read file: '{}'", path));
 	}
 
 	return buffer;
@@ -190,7 +194,7 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	void init(GLFWwindow* window)
 	{
-		assert(window != nullptr);
+		engineAssert(window != nullptr, "GLFW Window not initialized");
 		m_window = window;
 
 		try
@@ -529,16 +533,18 @@ public:
 	uint32_t findMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 	{
 		vk::PhysicalDeviceMemoryProperties physDeviceMemProps = m_physicalDevice.getMemoryProperties();
-		for (uint32_t i = 0; i < physDeviceMemProps.memoryTypeCount; ++i)
-		{
-			if ((typeFilter & (i << 1)) &&
-				(physDeviceMemProps.memoryTypes[i].propertyFlags & properties) == properties)
+		std::vector<uint32_t> indices(physDeviceMemProps.memoryTypeCount);
+		std::iota(indices.begin(), indices.end(), 0);
+
+		auto it = std::find_if(indices.begin(), indices.end(),
+			[&](uint32_t i)
 			{
-				return i;
-			}
-		}
-		assert(false);
-		return 0;
+				return (typeFilter & (1 << i)) &&
+					(physDeviceMemProps.memoryTypes[i].propertyFlags & properties) == properties;
+			});
+
+		engineAssert(it != indices.end(), std::format("Didn't find suitable memory type"));
+		return *it;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -643,7 +649,7 @@ public:
 	{
 		VkSurfaceKHR rawSurface = {};
 		VkResult result = glfwCreateWindowSurface(m_vkInstance, m_window, nullptr, &rawSurface);
-		assert(result == VK_SUCCESS);
+		engineAssert(result == VK_SUCCESS, "Create surface failed");
 		m_surface = vk::SurfaceKHR(rawSurface);
 	}
 
@@ -1144,12 +1150,12 @@ public:
 				, properties.deviceName.operator std::string()) << std::endl;
 		}
 
-		assert(bestScore > 0);
-		assert(m_physicalDevice != VK_NULL_HANDLE);
-		assert(m_physicalDeviceData.m_queueFamilies.isValid());
+		engineAssert(bestScore > 0, "No suitable videocard found");
+		engineAssert(m_physicalDevice != VK_NULL_HANDLE, "Physical device is NULL");
+		engineAssert(m_physicalDeviceData.m_queueFamilies.isValid(), "Queue families are not valid");
 		//-- Maybe check if it supports specific modes we wanna see like mailbox & RGB8UNORM
-		assert(!m_physicalDeviceData.m_swapchainDetails.m_presentMode.empty());
-		assert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty());
+		engineAssert(!m_physicalDeviceData.m_swapchainDetails.m_presentMode.empty(), "Present mode is empty");
+		engineAssert(!m_physicalDeviceData.m_swapchainDetails.m_surfaceSupportedFormats.empty(), "Surface formats empty");
 	}
 
 
@@ -1236,12 +1242,13 @@ public:
 	}
 
 	//-------------------------------------------------------------------------------------------------
+	//-- const char* here because glfw returns const char** as extentions list
 	void checkExtensionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
 	{
 		auto extensionsProps = vk::enumerateInstanceExtensionProperties();
 		for (const char* extension : instanceExtentionsAppNeed)
 		{
-			auto itRes = std::ranges::find_if(extensionsProps, [&](const vk::ExtensionProperties& vkInst)
+			auto itRes = std::find_if(extensionsProps.begin(), extensionsProps.end(), [extension](const vk::ExtensionProperties& vkInst)
 				{
 					if (strcmp(vkInst.extensionName, extension) == 0)
 					{
@@ -1249,7 +1256,7 @@ public:
 					}
 					return false;
 				});
-			assert(itRes != extensionsProps.end());
+			engineAssert(itRes != extensionsProps.end(), std::format("Extention: {} is not supported", extension));
 		}
 	}
 
@@ -1260,7 +1267,7 @@ public:
 
 		for (const char* layer : validationLayerAppNeed)
 		{
-			auto itRes = std::ranges::find_if(availableLayers, [&](const vk::LayerProperties& vkInst)
+			auto itRes = std::find_if(availableLayers.begin(), availableLayers.end(), [&](const vk::LayerProperties& vkInst)
 				{
 					if (strcmp(vkInst.layerName, layer) == 0)
 					{
@@ -1268,7 +1275,7 @@ public:
 					}
 					return false;
 				});
-			assert(itRes != availableLayers.end());
+			engineAssert(itRes != availableLayers.end(), std::format("Layer: {} is not supported", layer));
 		}
 	}
 
