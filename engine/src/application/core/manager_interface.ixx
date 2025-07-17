@@ -1,7 +1,7 @@
 export module manager_interface;
 
+import <absl/container/flat_hash_map.h>;
 import <memory>;
-import <unordered_map>;
 import <string>;
 import <cassert>;
 import <algorithm>;
@@ -102,5 +102,5 @@ export struct ManagerHolder
 	}
 
 private:
-	std::unordered_map<std::string, Manager> m_managers;
+	absl::flat_hash_map<std::string, Manager>	m_managers;
 };

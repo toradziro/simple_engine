@@ -6,7 +6,7 @@ module;
 
 export module renderer_system;
 
-import <unordered_map>;
+import <absl/container/flat_hash_map.h>;
 import <memory>;
 import <filesystem>;
 import <iostream>;
@@ -66,7 +66,7 @@ public:
 	}
 
 private:
-	using TextureMap = std::unordered_map<std::string, std::unique_ptr<VulkanTexture>>;
+	using TextureMap = absl::flat_hash_map<std::string, std::unique_ptr<VulkanTexture>>;
 
 	TextureMap			m_texturesMap;
 	VkGraphicDevice&	m_graphicDevice;
@@ -261,6 +261,11 @@ private:
 		}
 
 		//-- Group by textures
+		std::sort(sprites.begin(), sprites.end(), [](const auto& lhs, const auto& rhs)
+			{
+				return lhs.m_position.z < rhs.m_position.z;
+			});
+
 		auto batches = sprites | std::views::chunk_by([](const auto& lhs, const auto& rhs)
 			{
 				return lhs.m_texturePath == rhs.m_texturePath;

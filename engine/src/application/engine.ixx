@@ -5,6 +5,7 @@ import <format>;
 import <chrono>;
 import <ctime>;
 import <print>;
+import <absl/time/time.h>;
 
 import window_manager;
 import window_system;
@@ -63,7 +64,7 @@ public:
 
 		while (m_running)
 		{
-			auto t_start = std::chrono::high_resolution_clock::now();
+			auto timeStart = absl::Now();
 			auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
 
 			for (auto& [name, system] : m_systemHolder)
@@ -71,8 +72,8 @@ public:
 				system.update(lastFrameDt);
 			}
 
-			const auto t_end = std::chrono::high_resolution_clock::now();
-			lastFrameDt = std::chrono::duration<float>(t_end - t_start).count();
+			auto timeEnd = absl::Now();
+			lastFrameDt = absl::ToDoubleSeconds(timeEnd - timeStart);
 		}
 	}
 

@@ -37,13 +37,22 @@ set(VULKAN_INCLUDE_DIR "${VULKAN_SDK}/Include")
 set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc/libshaderc/include")
 set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/stb")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking")
+set(ABSEIL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/GLFW" EXCLUDE_FROM_ALL)
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
+
+# Shaderc
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc" EXCLUDE_FROM_ALL)
+
+# Abseil configuration
+set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "")
+set(ABSL_BUILD_TESTING OFF CACHE BOOL "")
+set(ABSL_USE_EXTERNAL_GOOGLETEST OFF CACHE BOOL "")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil" EXCLUDE_FROM_ALL)
 
 # Main project
 add_executable(engine)
@@ -86,6 +95,7 @@ target_include_directories(engine PRIVATE
     ${SHADERC_INCLUDE_DIR}
     ${STB_INCLUDE_DIR}
     ${IMGUI_INCLUDE_DIR}
+	${ABSEIL_INCLUDE_DIR}
 )
 
 # Vulkan path
@@ -93,7 +103,16 @@ set(VULKAN_LIB_DIR "${VULKAN_SDK}/Lib")
 target_link_directories(engine PRIVATE ${VULKAN_LIB_DIR})
 
 # Add libs
-target_link_libraries(engine PRIVATE glfw vulkan-1 shaderc)
+target_link_libraries(engine PRIVATE
+	glfw
+	vulkan-1
+	shaderc
+	absl::flat_hash_map
+	absl::hash
+	absl::strings
+	absl::time
+	absl::base
+)
 
 # Win defines
 if(WIN32)

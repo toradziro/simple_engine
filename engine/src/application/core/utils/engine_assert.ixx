@@ -17,7 +17,7 @@ export void engineAssert(bool val, const std::string_view message = "")
 	if (!val)
 	{
 		std::println("[ASSERT]: {}", message);
-		std::abort();
+		std::terminate();
 	}
 }
 #endif

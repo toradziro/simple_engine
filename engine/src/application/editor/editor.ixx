@@ -58,13 +58,15 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	EditorSystem(EngineContext& context) : m_engineContext(context)
 	{
-		m_firstSprite = { { 0.5f, 0.5f, 0.0f }, "images/nyan_cat.png" };
+		m_firstSprite = { { 0.5f, 0.5f, 0.5f }, "images/nyan_cat.png" };
 		m_secondSprite = { { 0.0f, 0.0f, 0.0f }, "images/gg2.png" };
 	}
 
 	//-------------------------------------------------------------------------------------------------
 	void update(float dt)
 	{
+		m_fps = 1.0f / dt;
+
 		auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
 		rendererManager.addImGuiDrawCallback([this]()
 			{
@@ -85,23 +87,47 @@ private:
 	void updateUI()
 	{
 		//-- Test integration
-		ImGui::Begin("Test Window");
-		if (ImGui::Button("Switch Textures"))
+		if (ImGui::Begin("Test Window"))
 		{
-			std::string tmp = m_firstSprite.m_texturePath;
-			m_firstSprite.m_texturePath = m_secondSprite.m_texturePath;
-			m_secondSprite.m_texturePath = tmp;
+			if (ImGui::Button("Switch Textures"))
+			{
+				std::string tmp = m_firstSprite.m_texturePath;
+				m_firstSprite.m_texturePath = m_secondSprite.m_texturePath;
+				m_secondSprite.m_texturePath = tmp;
+			}
+
+			drawVec3Prop(m_firstSprite.m_position, "f_sprite");
+			drawVec3Prop(m_secondSprite.m_position, "s_sprite");
+			ImGui::End();
 		}
 
-		drawVec3Prop(m_firstSprite.m_position, "f_sprite");
-		drawVec3Prop(m_secondSprite.m_position, "s_sprite");
+		if (ImGui::Begin("Statistics info"))
+		{
+			ImGui::Text("FPS: %d", static_cast<int>(m_fps));
+			ImGui::End();
 
-		ImGui::End();
+			//ImGui::Text("Current Scene: %s", m_context->m_currentScene->name().c_str());
+			//if (m_context->m_selectedEntity)
+			//{
+				//std::string name = m_context->m_selectedEntity.component<EntityNameComponent>().m_name;
+				//ImGui::Text("Selected entity: %s", name.c_str());
+			//}
+			//else
+			//{
+				//ImGui::Text("Selected entity: <none>");
+			//}
+			//ImGui::Text("Time spent on a call: %.1f ms", m_dt * 1000.0f);
+			//const auto& stat = Application::subsystems().st<Renderer2D>().stats();
+			//ImGui::Text("Draw calls: %d", stat.m_drawCalls);
+			//ImGui::Text("Quads count: %d", stat.m_quadCount);
+		}
 	}
 
+private:
 	EngineContext& m_engineContext;
 
 	//-- test
 	SpriteInfo		m_firstSprite;
 	SpriteInfo		m_secondSprite;
+	float			m_fps;
 };

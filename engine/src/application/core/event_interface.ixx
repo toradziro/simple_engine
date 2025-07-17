@@ -1,7 +1,6 @@
 export module event_interface;
 
 import <memory>;
-import <unordered_map>;
 import <string>;
 import <cassert>;
 import <algorithm>;
