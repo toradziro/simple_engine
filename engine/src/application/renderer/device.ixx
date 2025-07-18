@@ -5,6 +5,7 @@ module;
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define VULKAN_HPP_NO_EXCEPTIONS
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
@@ -197,66 +198,58 @@ public:
 		engineAssert(window != nullptr, "GLFW Window not initialized");
 		m_window = window;
 
-		try
-		{
-			createVkInstance();
-			//-- Create surface earlier than other devices types since we need it
-			//-- in checking queue that can support presentation operations
-			std::println("createSurface");
-			createSurface();
-			std::println("setupPhysicalDevice");
-			setupPhysicalDevice();
-			std::println("createLogicalDevice");
-			createLogicalDevice();
-			std::println("createSwapchain");
-			createSwapchain();
-			std::println("createShaderModule");
-			createShaderModule();
-			std::println("createRenderPass");
-			createRenderPass();
-			std::println("createDescriptorSetLayout");
-			createDescriptorSetLayout();
-			std::println("createPipeline");
-			createPipeline();
-			std::println("createFramebuffer");
-			createFramebuffer();
-			std::println("createCommandPool");
-			createCommandPool();
-			std::println("createTextureSampler");
-			createTextureSampler();
-			std::println("createUniformBuffers");
-			createUniformBuffers();
-			std::println("createDescriptorPool");
-			createDescriptorPool();
-			std::println("createDescriptorSets");
-			createDescriptorsSets();
-			std::println("createCommandBuffer");
-			createCommandBuffer();
-			std::println("createSyncObjects");
-			createSyncObjects();
-			std::println("Vulkan objects initialized");
+		createVkInstance();
+		//-- Create surface earlier than other devices types since we need it
+		//-- in checking queue that can support presentation operations
+		std::println("createSurface");
+		createSurface();
+		std::println("setupPhysicalDevice");
+		setupPhysicalDevice();
+		std::println("createLogicalDevice");
+		createLogicalDevice();
+		std::println("createSwapchain");
+		createSwapchain();
+		std::println("createShaderModule");
+		createShaderModule();
+		std::println("createRenderPass");
+		createRenderPass();
+		std::println("createDescriptorSetLayout");
+		createDescriptorSetLayout();
+		std::println("createPipeline");
+		createPipeline();
+		std::println("createFramebuffer");
+		createFramebuffer();
+		std::println("createCommandPool");
+		createCommandPool();
+		std::println("createTextureSampler");
+		createTextureSampler();
+		std::println("createUniformBuffers");
+		createUniformBuffers();
+		std::println("createDescriptorPool");
+		createDescriptorPool();
+		std::println("createDescriptorSets");
+		createDescriptorsSets();
+		std::println("createCommandBuffer");
+		createCommandBuffer();
+		std::println("createSyncObjects");
+		createSyncObjects();
+		std::println("Vulkan objects initialized");
 
-			ImGuiInitInfo imGuiIntegrationInfo{
-				.m_apiVersion = apiVersion(),
-				.m_instance = instance(),
-				.m_physicalDevice = physicalDevice(),
-				.m_device = device(),
-				.m_queueFamily = getGraphicQueueFamily(),
-				.m_queue = graphicQueue(),
-				.m_descriptorPool = descriptorPool(),
-				.m_renderPass = renderPass(),
-				.m_minImageCount = minImageCount(),
-				.m_imageCount = imageCount(),
-				.m_window = m_window
-			};
+		ImGuiInitInfo imGuiIntegrationInfo{
+			.m_apiVersion = apiVersion(),
+			.m_instance = instance(),
+			.m_physicalDevice = physicalDevice(),
+			.m_device = device(),
+			.m_queueFamily = getGraphicQueueFamily(),
+			.m_queue = graphicQueue(),
+			.m_descriptorPool = descriptorPool(),
+			.m_renderPass = renderPass(),
+			.m_minImageCount = minImageCount(),
+			.m_imageCount = imageCount(),
+			.m_window = m_window
+		};
 
-			m_imGuiIntegration = ImGuiIntegration(imGuiIntegrationInfo);
-		}
-		catch (const std::exception& e)
-		{
-			std::cerr << "Error during initialization: " << e.what() << std::endl;
-			throw; // Re-throw to allow proper cleanup
-		}
+		m_imGuiIntegration = ImGuiIntegration(imGuiIntegrationInfo);
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -364,23 +357,15 @@ public:
 			.setSwapchains(m_swapchain)
 			.setImageIndices(m_currImageIndex);
 
-		try
-		{
-			[[maybe_unused]] auto result = m_queues.m_presentationQueue.presentKHR(presentInfo);
-			if (result == vk::Result::eSuboptimalKHR)
-			{
-				recreateSwapChain();
-				m_framebufferResized = false;
-			}
-		}
-		catch (const vk::OutOfDateKHRError&)
+		auto result = m_queues.m_presentationQueue.presentKHR(presentInfo);
+		if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR)
 		{
 			recreateSwapChain();
 			m_framebufferResized = false;
 		}
-		catch (const vk::SystemError& e)
+		else if (result != vk::Result::eSuccess)
 		{
-			throw std::runtime_error(std::format("Failed to present swap chain image: {}", e.what()));
+			engineAssert(false, std::format("Failed to present swap chain image"));
 		}
 
 		m_currFrame = (m_currFrame + 1) % C_MAX_FRAMES_IN_FLIGHT;
@@ -601,7 +586,9 @@ public:
 		createInfo.setPEnabledLayerNames(validationLayers);
 
 		//-- Create instance
-		m_vkInstance = vk::createInstance(createInfo);
+		auto [res, instance] = vk::createInstance(createInfo);
+		engineAssert(res == vk::Result::eSuccess, std::format("Failed to create instance"));
+		m_vkInstance = instance;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -632,7 +619,9 @@ public:
 			.setPEnabledExtensionNames(C_DEVICE_EXTENSIONS);
 
 		//-- Creating logical device
-		m_logicalDevice = m_physicalDevice.createDevice(deviceCreateInfo);
+		auto [res, device] = m_physicalDevice.createDevice(deviceCreateInfo);
+		engineAssert(res == vk::Result::eSuccess, std::format("Failed create logical device"));
+		m_logicalDevice = device;
 
 		//-- Queues are created automatically, we save it
 		m_logicalDevice.getQueue(m_physicalDeviceData.m_queueFamilies.m_graphicQueue
@@ -712,14 +701,17 @@ public:
 		swapChainCreateInfo.setOldSwapchain(VK_NULL_HANDLE)
 			.setSurface(m_surface);
 
-		m_swapchain = m_logicalDevice.createSwapchainKHR(swapChainCreateInfo);
+		auto [resSwapchain, swapchain] = m_logicalDevice.createSwapchainKHR(swapChainCreateInfo);
+		engineAssert(resSwapchain == vk::Result::eSuccess, "Failed create swapchain");
+		m_swapchain = swapchain;
 
-		auto images = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
+		auto [resSwapchainImages, images] = m_logicalDevice.getSwapchainImagesKHR(m_swapchain);
+		engineAssert(resSwapchainImages == vk::Result::eSuccess, "Failed to get swapchain image");
 		for (auto& image : images)
 		{
 			m_swapchainImages.push_back({
-				.m_image = image,
-				.m_imageView = createImageView(image, surfaceFormat.format, vk::ImageAspectFlagBits::eColor)
+					.m_image = image,
+					.m_imageView = createImageView(image, surfaceFormat.format, vk::ImageAspectFlagBits::eColor)
 				});
 		}
 
@@ -756,13 +748,17 @@ public:
 		vertexShaderModuleCreateInfo.setCodeSize(compiled_vertex_shader.size() * sizeof(uint32_t))
 			.setPCode(compiled_vertex_shader.data());
 
-		m_vertexShaderModule = m_logicalDevice.createShaderModule(vertexShaderModuleCreateInfo);
+		auto [vRes, vertexShaderModule] = m_logicalDevice.createShaderModule(vertexShaderModuleCreateInfo);
+		engineAssert(vRes == vk::Result::eSuccess, "Failed to create vertex shader module");
+		m_vertexShaderModule = vertexShaderModule;
 
 		vk::ShaderModuleCreateInfo fragmentShaderModuleCreateInfo = {};
 		fragmentShaderModuleCreateInfo.setCodeSize(compiled_fragment_shader.size() * sizeof(uint32_t))
 			.setPCode(compiled_fragment_shader.data());
 
-		m_fragmentShaderModule = m_logicalDevice.createShaderModule(fragmentShaderModuleCreateInfo);
+		auto [fRes, fragmentShaderModule] = m_logicalDevice.createShaderModule(fragmentShaderModuleCreateInfo);
+		engineAssert(fRes == vk::Result::eSuccess, "Failed to create fragment shader module");
+		m_fragmentShaderModule = fragmentShaderModule;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -778,9 +774,9 @@ public:
 			vk::DescriptorSetLayoutCreateInfo createInfo = {};
 			createInfo.setBindingCount(1)
 				.setBindings(uniformLayoutBinding);
-			{
-				m_uniformsSetLayout = m_logicalDevice.createDescriptorSetLayout(createInfo);
-			}
+			auto [res, descriptorSetLayout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createDescriptorSetLayout");
+			m_uniformsSetLayout = descriptorSetLayout;
 		}
 
 		{
@@ -793,9 +789,9 @@ public:
 			vk::DescriptorSetLayoutCreateInfo createInfo = {};
 			createInfo.setBindingCount(1)
 				.setBindings(samplerLayoutBinding);
-			{
-				m_texturesSetLayout = m_logicalDevice.createDescriptorSetLayout(createInfo);
-			}
+			auto [res, texturesSetLayout] = m_logicalDevice.createDescriptorSetLayout(createInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createDescriptorSetLayout");
+			m_texturesSetLayout = texturesSetLayout;
 		}
 	}
 
@@ -894,7 +890,11 @@ public:
 		pipelineLayoutInfo.setSetLayouts(layouts)
 			.setSetLayoutCount(2);
 
-		m_pipelineLayout = m_logicalDevice.createPipelineLayout(pipelineLayoutInfo);
+		{
+			auto [res, piplineLayout] = m_logicalDevice.createPipelineLayout(pipelineLayoutInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createPipelineLayout");
+			m_pipelineLayout = piplineLayout;
+		}
 
 		vk::GraphicsPipelineCreateInfo pipelineInfo = {};
 		//-- Static part of pypline
@@ -914,11 +914,14 @@ public:
 			.setRenderPass(m_renderPass)
 			.setSubpass(0);
 
-		auto res = m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
-			, 1
-			, &pipelineInfo
-			, nullptr
-			, &m_graphicsPipeline);
+		{
+			auto res = m_logicalDevice.createGraphicsPipelines(VK_NULL_HANDLE
+				, 1
+				, &pipelineInfo
+				, nullptr
+				, &m_graphicsPipeline);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createGraphicsPipelines");
+		}
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -958,7 +961,9 @@ public:
 			.setDependencyCount(1)
 			.setDependencies(dependency);
 
-		m_renderPass = m_logicalDevice.createRenderPass(renderPassInfo);
+		auto [res, renderPass] = m_logicalDevice.createRenderPass(renderPassInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to createRenderPass");
+		m_renderPass = renderPass;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -978,7 +983,9 @@ public:
 				.setHeight(m_imageExtent.height)
 				.setLayers(1);
 
-			m_swapChainFramebuffers[i] = m_logicalDevice.createFramebuffer(framebufferInfo);
+			auto [res, framebuffer] = m_logicalDevice.createFramebuffer(framebufferInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createFramebuffer");
+			m_swapChainFramebuffers[i] = framebuffer;
 			++i;
 		}
 	}
@@ -990,7 +997,9 @@ public:
 		poolInfo.setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
 			.setQueueFamilyIndex(m_physicalDeviceData.m_queueFamilies.m_graphicQueue);
 
-		m_commandPool = m_logicalDevice.createCommandPool(poolInfo);
+		auto [res, commandPool] = m_logicalDevice.createCommandPool(poolInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to createCommandPool");
+		m_commandPool = commandPool;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -1015,7 +1024,9 @@ public:
 			.setMinLod(0.0f)
 			.setMaxLod(0.0f);
 
-		m_textureSampler = m_logicalDevice.createSampler(createInfo);
+		auto [res, sampler] = m_logicalDevice.createSampler(createInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to createSampler");
+		m_textureSampler = sampler;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -1058,7 +1069,9 @@ public:
 			.setMaxSets(C_MAX_FRAMES_IN_FLIGHT + m_maxTextures)
 			.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 
-		m_descriptorPool = m_logicalDevice.createDescriptorPool(createInfo);
+		auto [res, descriptorPool] = m_logicalDevice.createDescriptorPool(createInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to createDescriptorPool");
+		m_descriptorPool = descriptorPool;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -1069,7 +1082,9 @@ public:
 		allocInfo.setDescriptorPool(m_descriptorPool)
 			.setSetLayouts(layouts);
 
-		m_descriptorSets = m_logicalDevice.allocateDescriptorSets(allocInfo);
+		auto [res, descriptorSets] = m_logicalDevice.allocateDescriptorSets(allocInfo);
+		m_descriptorSets = descriptorSets;
+		engineAssert(res == vk::Result::eSuccess, "Failed to allocateDescriptorSets");
 		for (uint32_t i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 		{
 			vk::DescriptorBufferInfo bufferInfo = {};
@@ -1103,7 +1118,9 @@ public:
 			.setCommandPool(m_commandPool)
 			.setLevel(vk::CommandBufferLevel::ePrimary);
 
-		m_commandBuffers = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+		auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(commandBufferAllocateInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to allocateCommandBuffers");
+		m_commandBuffers = commandBuffers;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -1118,9 +1135,21 @@ public:
 
 		for (int i = 0; i < C_MAX_FRAMES_IN_FLIGHT; ++i)
 		{
-			m_imageAvailableSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
-			m_renderFinishedSemaphores.push_back(m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo()));
-			m_inFlightFences.push_back(m_logicalDevice.createFence(fenceInfo));
+			{
+				auto [res, semaphor] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+				engineAssert(res == vk::Result::eSuccess, "Failed to createSemaphore");
+				m_imageAvailableSemaphores.push_back(semaphor);
+			}
+			{
+				auto [res, semaphor] = m_logicalDevice.createSemaphore(vk::SemaphoreCreateInfo());
+				engineAssert(res == vk::Result::eSuccess, "Failed to createSemaphore");
+				m_renderFinishedSemaphores.push_back(semaphor);
+			}
+			{
+				auto [res, fence] = m_logicalDevice.createFence(fenceInfo);
+				engineAssert(res == vk::Result::eSuccess, "Failed to createFence");
+				m_inFlightFences.push_back(fence);
+			}
 		}
 
 	}
@@ -1128,7 +1157,8 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	void setupPhysicalDevice()
 	{
-		auto physDevices = m_vkInstance.enumeratePhysicalDevices();
+		auto [res, physDevices] = m_vkInstance.enumeratePhysicalDevices();
+		engineAssert(res == vk::Result::eSuccess, "Failed to enumeratePhysicalDevices");
 
 		int bestScore = 0;
 		for (vk::PhysicalDevice& device : physDevices)
@@ -1167,7 +1197,8 @@ public:
 			.setDescriptorSetCount(1)
 			.setSetLayouts(m_texturesSetLayout);
 
-		auto allocatedDescriptors = m_logicalDevice.allocateDescriptorSets(allocInfo);
+		auto [res, allocatedDescriptors] = m_logicalDevice.allocateDescriptorSets(allocInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to allocateDescriptorSets");
 
 		vk::DescriptorImageInfo imageInfo = {};
 		imageInfo.setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal)
@@ -1245,7 +1276,9 @@ public:
 	//-- const char* here because glfw returns const char** as extentions list
 	void checkExtensionsSupport(const std::vector<const char*>& instanceExtentionsAppNeed) const
 	{
-		auto extensionsProps = vk::enumerateInstanceExtensionProperties();
+		auto [res, extensionsProps] = vk::enumerateInstanceExtensionProperties();
+		engineAssert(res == vk::Result::eSuccess, "Failed to enumerateInstanceExtensionProperties");
+
 		for (const char* extension : instanceExtentionsAppNeed)
 		{
 			auto itRes = std::find_if(extensionsProps.begin(), extensionsProps.end(), [extension](const vk::ExtensionProperties& vkInst)
@@ -1263,7 +1296,8 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	void checkValidationLayerSupport(const std::vector<const char*>& validationLayerAppNeed) const
 	{
-		auto availableLayers = vk::enumerateInstanceLayerProperties();
+		auto [res, availableLayers] = vk::enumerateInstanceLayerProperties();
+		engineAssert(res == vk::Result::eSuccess, "Failed to enumerateInstanceLayerProperties");
 
 		for (const char* layer : validationLayerAppNeed)
 		{
@@ -1282,7 +1316,8 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	bool checkDeviceExtensionsSupport(const std::vector<const char*>& deviceExtentions, vk::PhysicalDevice physicalDevice) const
 	{
-		auto extensionsProps = physicalDevice.enumerateDeviceExtensionProperties();
+		auto [res, extensionsProps] = physicalDevice.enumerateDeviceExtensionProperties();
+		engineAssert(res == vk::Result::eSuccess, "Failed to enumerateDeviceExtensionProperties");
 
 		for (const char* extension : deviceExtentions)
 		{
@@ -1356,7 +1391,9 @@ public:
 					queueFamilies.m_graphicQueue = index;
 				}
 
-				vk::Bool32 presentSupport = device.getSurfaceSupportKHR(index, m_surface);
+				auto [res, presentSupport] = device.getSurfaceSupportKHR(index, m_surface);
+				engineAssert(res == vk::Result::eSuccess, "Failed to getSurfaceSupportKHR");
+
 				if (presentSupport == VK_TRUE)
 				{
 					queueFamilies.m_presentationQueue = index;
@@ -1379,9 +1416,24 @@ public:
 	{
 		SwapChainDetails details;
 
-		details.m_surfaceCapabilities = device.getSurfaceCapabilitiesKHR(m_surface);
-		details.m_surfaceSupportedFormats = device.getSurfaceFormatsKHR(m_surface);
-		details.m_presentMode = device.getSurfacePresentModesKHR(m_surface);
+		{
+			auto [res, surfaceCapabilities] = device.getSurfaceCapabilitiesKHR(m_surface);
+			engineAssert(res == vk::Result::eSuccess, "Failed to getSurfaceCapabilitiesKHR");
+			details.m_surfaceCapabilities = surfaceCapabilities;
+		}
+
+		{
+			auto [res, surfaceFormats] = device.getSurfaceFormatsKHR(m_surface);
+			engineAssert(res == vk::Result::eSuccess, "Failed to getSurfaceFormatsKHR");
+			details.m_surfaceSupportedFormats = surfaceFormats;
+		}
+
+		{
+			auto [res, presentModes] = device.getSurfacePresentModesKHR(m_surface);
+			engineAssert(res == vk::Result::eSuccess, "Failed to getSurfacePresentModesKHR");
+			details.m_presentMode = presentModes;
+		}
+
 		return details;
 	}
 
@@ -1453,7 +1505,10 @@ public:
 			.setLevelCount(1)
 			.setBaseArrayLayer(0);
 
-		return m_logicalDevice.createImageView(createInfo);
+		auto [res, imageView] = m_logicalDevice.createImageView(createInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to createImageView");
+
+		return imageView;
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -1468,7 +1523,11 @@ public:
 			.setUsage(usageFlags)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-		buffer = m_logicalDevice.createBuffer(bufferInfo);
+		{
+			auto [res, createdBuffer] = m_logicalDevice.createBuffer(bufferInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to createBuffer");
+			buffer = createdBuffer;
+		}
 
 		vk::MemoryRequirements memReq = m_logicalDevice.getBufferMemoryRequirements(buffer);
 		uint32_t memType = findMemoryType(memReq.memoryTypeBits, memPropFlags);
@@ -1477,7 +1536,11 @@ public:
 		allocInfo.setMemoryTypeIndex(memType)
 			.setAllocationSize(memReq.size);
 
-		deviceMemory = m_logicalDevice.allocateMemory(allocInfo);
+		{
+			auto [res, allocatedMemory] = m_logicalDevice.allocateMemory(allocInfo);
+			engineAssert(res == vk::Result::eSuccess, "Failed to allocateMemory");
+			deviceMemory = allocatedMemory;
+		}
 		m_logicalDevice.bindBufferMemory(buffer, deviceMemory, 0);
 	}
 
@@ -1577,7 +1640,9 @@ public:
 			.setCommandBufferCount(1);
 
 		vk::CommandBuffer commandBuffer = {};
-		auto commandBuffers = m_logicalDevice.allocateCommandBuffers(allocateInfo);
+		auto [res, commandBuffers] = m_logicalDevice.allocateCommandBuffers(allocateInfo);
+		engineAssert(res == vk::Result::eSuccess, "Failed to allocateCommandBuffers");
+
 		commandBuffer = *commandBuffers.begin();
 
 		vk::CommandBufferBeginInfo beginInfo = {};

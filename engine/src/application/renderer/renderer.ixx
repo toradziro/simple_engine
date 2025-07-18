@@ -162,17 +162,9 @@ public:
 	RendererSystem(EngineContext& context)
 		: m_engineContext(context)
 	{
-		try
-		{
-			m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
-			m_texureCache = std::make_unique<TextureCache>(m_device);
-			m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
-		}
-		catch (const std::exception& e)
-		{
-			std::cout << "Error during initialization: " << e.what() << std::endl;
-			throw;
-		}
+		m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
+		m_texureCache = std::make_unique<TextureCache>(m_device);
+		m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -210,41 +202,25 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	void beginFrame(float dt)
 	{
-		try
-		{
-			m_device.beginFrame(dt);
-		}
-		catch (const std::exception& e)
-		{
-			std::cout << "Error during BeginFrame: " << e.what() << std::endl;
-			throw;
-		}
+		m_device.beginFrame(dt);
 	}
 
 	//-------------------------------------------------------------------------------------------------
 	void endFrame()
 	{
-		try
-		{
-			const auto currFrameIndex = m_device.currFrame();
+		const auto currFrameIndex = m_device.currFrame();
 
-			batchSprites();
-			//-- Batch drawer will call device drawing
-			auto& drawListImGuiUI = m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi;
-			m_device.setImGuiDrawCallbacks(drawListImGuiUI);
-			m_batchDrawer->draw(m_batchedByTextureSprites);
-			m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi.clear();
+		batchSprites();
+		//-- Batch drawer will call device drawing
+		auto& drawListImGuiUI = m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi;
+		m_device.setImGuiDrawCallbacks(drawListImGuiUI);
+		m_batchDrawer->draw(m_batchedByTextureSprites);
+		m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi.clear();
 
-			//-- Clear collections, for now rendering has no any caches
-			m_batchedByTextureSprites.clear();
+		//-- Clear collections, for now rendering has no any caches
+		m_batchedByTextureSprites.clear();
 
-			m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites.clear();
-		}
-		catch (const std::exception& e)
-		{
-			std::cout << "Error during EndFrame: " << e.what() << std::endl;
-			throw;
-		}
+		m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites.clear();
 	}
 
 	//-------------------------------------------------------------------------------------------------

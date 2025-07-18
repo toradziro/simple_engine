@@ -3,12 +3,13 @@ module;
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define VULKAN_HPP_NO_EXCEPTIONS
+#include <vulkan/vulkan.hpp>
+
 export module vulkan_texture;
 
 import <string>;
 import <vector>;
-
-import <vulkan/vulkan.hpp>;
 
 import graphic_device;
 import engine_assert;
@@ -93,6 +94,7 @@ private:
 		// Copy data to staging buffer
 		void* data;
 		[[maybe_unused]] auto res = m_device->getLogicalDevice().mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
+
 		memcpy(data, m_pixelData.data(), imageSize);
 		m_device->getLogicalDevice().unmapMemory(stagingBufferMemory);
 
@@ -111,7 +113,8 @@ private:
 			.setSamples(vk::SampleCountFlagBits::e1)
 			.setSharingMode(vk::SharingMode::eExclusive);
 
-		m_image = m_device->getLogicalDevice().createImage(imageInfo);
+		auto [imageRes, image] = m_device->getLogicalDevice().createImage(imageInfo);
+		m_image = image;
 
 		// Allocate memory for texture
 		vk::MemoryRequirements memRequirements = m_device->getLogicalDevice().getImageMemoryRequirements(m_image);
@@ -121,7 +124,8 @@ private:
 			.setMemoryTypeIndex(m_device->findMemoryType(memRequirements.memoryTypeBits,
 			vk::MemoryPropertyFlagBits::eDeviceLocal));
 
-		m_imageMemory = m_device->getLogicalDevice().allocateMemory(allocInfo);
+		auto [allocRes, imageMem] = m_device->getLogicalDevice().allocateMemory(allocInfo);
+		m_imageMemory = imageMem;
 		m_device->getLogicalDevice().bindImageMemory(m_image, m_imageMemory, 0);
 
 		// Changing layout to once we need
@@ -144,7 +148,8 @@ private:
 			.setFormat(vkFormat)
 			.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-		m_imageView = m_device->getLogicalDevice().createImageView(viewInfo);
+		auto [imageViewRes, imageView] = m_device->getLogicalDevice().createImageView(viewInfo);
+		m_imageView = imageView;
 
 		// Cleaning pixel data
 		m_pixelData.clear();
