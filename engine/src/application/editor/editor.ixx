@@ -69,9 +69,9 @@ public:
 
 		auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
 		rendererManager.addImGuiDrawCallback([this]()
-			{
-				updateUI();
-			});
+		{
+			updateUI();
+		});
 
 		//-- Tst drawing here
 		rendererManager.addSpriteToDrawList(m_firstSprite);
@@ -80,7 +80,6 @@ public:
 
 	//-------------------------------------------------------------------------------------------------
 	void onEvent(Event& event) const {}
-
 
 private:
 	//-------------------------------------------------------------------------------------------------
@@ -109,12 +108,12 @@ private:
 			//ImGui::Text("Current Scene: %s", m_context->m_currentScene->name().c_str());
 			//if (m_context->m_selectedEntity)
 			//{
-				//std::string name = m_context->m_selectedEntity.component<EntityNameComponent>().m_name;
-				//ImGui::Text("Selected entity: %s", name.c_str());
+			//std::string name = m_context->m_selectedEntity.component<EntityNameComponent>().m_name;
+			//ImGui::Text("Selected entity: %s", name.c_str());
 			//}
 			//else
 			//{
-				//ImGui::Text("Selected entity: <none>");
+			//ImGui::Text("Selected entity: <none>");
 			//}
 			//ImGui::Text("Time spent on a call: %.1f ms", m_dt * 1000.0f);
 			//const auto& stat = Application::subsystems().st<Renderer2D>().stats();
@@ -127,7 +126,7 @@ private:
 	EngineContext& m_engineContext;
 
 	//-- test
-	SpriteInfo		m_firstSprite;
-	SpriteInfo		m_secondSprite;
-	float			m_fps;
+	SpriteInfo m_firstSprite;
+	SpriteInfo m_secondSprite;
+	float      m_fps;
 };

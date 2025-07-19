@@ -14,17 +14,17 @@ import event_interface;
 //-------------------------------------------------------------------------------------------------
 export struct ImGuiInitInfo
 {
-	uint32_t			m_apiVersion;
-	VkInstance			m_instance;
-	VkPhysicalDevice	m_physicalDevice;
-	VkDevice			m_device;
-	uint32_t			m_queueFamily;
-	VkQueue				m_queue;
-	VkDescriptorPool	m_descriptorPool;
-	VkRenderPass		m_renderPass;
-	uint32_t			m_minImageCount;
-	uint32_t			m_imageCount;
-	GLFWwindow*			m_window;
+	uint32_t         m_apiVersion;
+	VkInstance       m_instance;
+	VkPhysicalDevice m_physicalDevice;
+	VkDevice         m_device;
+	uint32_t         m_queueFamily;
+	VkQueue          m_queue;
+	VkDescriptorPool m_descriptorPool;
+	VkRenderPass     m_renderPass;
+	uint32_t         m_minImageCount;
+	uint32_t         m_imageCount;
+	GLFWwindow*      m_window;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -33,20 +33,21 @@ export class ImGuiIntegration
 public:
 	//-------------------------------------------------------------------------------------------------
 	ImGuiIntegration() = default;
+
 	//-------------------------------------------------------------------------------------------------
 	ImGuiIntegration(ImGuiInitInfo& initInfo)
 	{
 		ImGui_ImplVulkan_InitInfo imGuiVulkanInitInfo = {
-			.ApiVersion = initInfo.m_apiVersion,
-			.Instance = initInfo.m_instance,
-			.PhysicalDevice = initInfo.m_physicalDevice,
-			.Device = initInfo.m_device,
-			.QueueFamily = initInfo.m_queueFamily,
-			.Queue = initInfo.m_queue,
-			.DescriptorPool = initInfo.m_descriptorPool,
-			.RenderPass = initInfo.m_renderPass,
-			.MinImageCount = initInfo.m_minImageCount,
-			.ImageCount = initInfo.m_imageCount
+			.ApiVersion = initInfo.m_apiVersion
+			, .Instance = initInfo.m_instance
+			, .PhysicalDevice = initInfo.m_physicalDevice
+			, .Device = initInfo.m_device
+			, .QueueFamily = initInfo.m_queueFamily
+			, .Queue = initInfo.m_queue
+			, .DescriptorPool = initInfo.m_descriptorPool
+			, .RenderPass = initInfo.m_renderPass
+			, .MinImageCount = initInfo.m_minImageCount
+			, .ImageCount = initInfo.m_imageCount
 		};
 
 		ImGui::CreateContext();
@@ -87,7 +88,7 @@ public:
 		{
 			ImGui::PopStyleVar(3);
 
-			ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
+			ImGuiID            dockspace_id = ImGui::GetID("MainDockSpace");
 			ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 			ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags, nullptr);
 		}
@@ -125,7 +126,7 @@ public:
 
 		ImGui::DestroyContext();
 	}
-	
+
 private:
 	//-------------------------------------------------------------------------------------------------
 	void setupStyle()

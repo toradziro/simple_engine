@@ -13,16 +13,16 @@ import imgui_integration;
 //-------------------------------------------------------------------------------------------------
 export struct VertexData
 {
-	glm::vec4	m_vertex;
-	glm::vec3	m_color;
-	glm::vec2	m_texCoord;
+	glm::vec4 m_vertex;
+	glm::vec3 m_color;
+	glm::vec2 m_texCoord;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct SpriteInfo
 {
-	glm::vec3	m_position;
-	std::string	m_texturePath;
+	glm::vec3   m_position;
+	std::string m_texturePath;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -43,6 +43,6 @@ export struct RendererManager
 	}
 
 	//-- User notation object
-	std::vector<SpriteInfo>			m_sprites;
-	std::vector<ImGuiDrawCallback>	m_imGuiUpdatesUi;
+	std::vector<SpriteInfo>        m_sprites;
+	std::vector<ImGuiDrawCallback> m_imGuiUpdatesUi;
 };

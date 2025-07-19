@@ -24,10 +24,10 @@ public:
 	Engine()
 	{
 		WindowInfo winInfo = {
-			.m_windowName = "Simple",
-			.m_width = 1200,
-			.m_height = 800,
-			.m_eventCallback = [&](Event& event)
+			.m_windowName = "Simple"
+			, .m_width = 1200
+			, .m_height = 800
+			, .m_eventCallback = [&] (Event& event)
 			{
 				if (eventTypeCheck<WindowCloseEvent>(event))
 				{
@@ -53,9 +53,7 @@ public:
 	}
 
 	//-------------------------------------------------------------------------------------------------
-	~Engine()
-	{
-	}
+	~Engine() {}
 
 	//-------------------------------------------------------------------------------------------------
 	void run()
@@ -64,7 +62,7 @@ public:
 
 		while (m_running)
 		{
-			auto timeStart = absl::Now();
+			auto  timeStart = absl::Now();
 			auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
 
 			for (auto& [name, system] : m_systemHolder)
@@ -78,8 +76,8 @@ public:
 	}
 
 private:
-	EngineContext	m_context;
-	SystemHolder	m_systemHolder;
-	
-	bool			m_running = true;
+	EngineContext m_context;
+	SystemHolder  m_systemHolder;
+
+	bool m_running = true;
 };

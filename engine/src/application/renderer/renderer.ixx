@@ -27,18 +27,18 @@ import vulkan_texture;
 //-------------------------------------------------------------------------------------------------
 constexpr std::array<VertexData, 4> C_QUAD_BASIC_DATA =
 {
-	VertexData{{-0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 0.0f }},
-	VertexData{{0.5f, -0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 0.0f }},
-	VertexData{{0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 1.0f, 1.0f }},
-	VertexData{{-0.5f, 0.5f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f}, { 0.0f, 1.0f }}
+	VertexData{ { -0.5f, -0.5f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f } }
+	, VertexData{ { 0.5f, -0.5f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f } }
+	, VertexData{ { 0.5f, 0.5f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f } }
+	, VertexData{ { -0.5f, 0.5f, 0.0f, 1.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f } }
 };
 
 //-------------------------------------------------------------------------------------------------
 struct TexuredSpriteBatch
 {
-	std::vector<std::array<VertexData, 4>>	m_geometryBatch;
-	VulkanTexture* m_texture;
-	uint32_t								m_spritesCount;
+	std::vector<std::array<VertexData, 4>> m_geometryBatch;
+	VulkanTexture*                         m_texture;
+	uint32_t                               m_spritesCount;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -60,7 +60,10 @@ public:
 		auto root_path = curr_path.parent_path();
 		auto full_path = root_path / texturePath;
 
-		auto res = m_texturesMap.insert({ texturePath, std::make_unique<VulkanTexture>(full_path.string(), &m_graphicDevice) });
+		auto res = m_texturesMap.insert({
+			texturePath
+			, std::make_unique<VulkanTexture>(full_path.string(), &m_graphicDevice)
+		});
 
 		return res.first->second.get();
 	}
@@ -68,8 +71,8 @@ public:
 private:
 	using TextureMap = absl::flat_hash_map<std::string, std::unique_ptr<VulkanTexture>>;
 
-	TextureMap			m_texturesMap;
-	VkGraphicDevice&	m_graphicDevice;
+	TextureMap       m_texturesMap;
+	VkGraphicDevice& m_graphicDevice;
 };
 
 class BatchDrawer
@@ -109,9 +112,9 @@ public:
 		for (auto& batch : spriteBatches)
 		{
 			TexturedGeometry texturedGeometry = {
-				.m_memory = m_graphicDevice.createCombinedVertexBuffer(batch.m_geometryBatch),
-				.m_textureDescriptorSet = batch.m_texture->getDescriptorSet(),
-				.m_spritesCount = batch.m_spritesCount
+				.m_memory = m_graphicDevice.createCombinedVertexBuffer(batch.m_geometryBatch)
+				, .m_textureDescriptorSet = batch.m_texture->getDescriptorSet()
+				, .m_spritesCount = batch.m_spritesCount
 			};
 
 			currentTexturedGeometryBatch.emplace_back(std::move(texturedGeometry));
@@ -148,10 +151,10 @@ private:
 		currentIndexBatch.clear();
 	}
 
-	VkGraphicDevice&					m_graphicDevice;
+	VkGraphicDevice& m_graphicDevice;
 	//-- Transformed to device notation data
-	std::vector<TexturedGeometryBatch>	m_vertexBuffersToFrames;
-	std::vector<BatchIndecies>			m_indexBuffersToFrames;
+	std::vector<TexturedGeometryBatch> m_vertexBuffersToFrames;
+	std::vector<BatchIndecies>         m_indexBuffersToFrames;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -237,22 +240,24 @@ private:
 		}
 
 		//-- Group by textures
-		std::sort(sprites.begin(), sprites.end(), [](const auto& lhs, const auto& rhs)
-			{
-				return lhs.m_position.z < rhs.m_position.z;
-			});
+		std::sort(sprites.begin()
+		          , sprites.end()
+		          , [] (const auto& lhs, const auto& rhs)
+		          {
+			          return lhs.m_position.z < rhs.m_position.z;
+		          });
 
-		auto batches = sprites | std::views::chunk_by([](const auto& lhs, const auto& rhs)
-			{
-				return lhs.m_texturePath == rhs.m_texturePath;
-			});
+		auto batches = sprites | std::views::chunk_by([] (const auto& lhs, const auto& rhs)
+		{
+			return lhs.m_texturePath == rhs.m_texturePath;
+		});
 
 		//-- Create batches
 		for (const auto& batch : batches)
 		{
 			//-- Texture path from the first element of group
 			const std::string& texturePath = batch.front().m_texturePath;
-			VulkanTexture* texture = m_texureCache->loadTexture(texturePath);
+			VulkanTexture*     texture = m_texureCache->loadTexture(texturePath);
 
 			//-- Gather all vertices
 			std::vector<std::array<VertexData, 4>> batchedVertices;
@@ -277,19 +282,23 @@ private:
 			}
 
 			//-- Finally - we got the batch
-			TexuredSpriteBatch spriteBatch = { std::move(batchedVertices), texture, static_cast<uint32_t>(batch.size()) };
+			TexuredSpriteBatch spriteBatch = {
+				std::move(batchedVertices)
+				, texture
+				, static_cast<uint32_t>(batch.size())
+			};
 			m_batchedByTextureSprites.emplace_back(std::move(spriteBatch));
 		}
 	}
 
 private:
-	EngineContext&						m_engineContext;
+	EngineContext& m_engineContext;
 
-	VkGraphicDevice						m_device;
+	VkGraphicDevice m_device;
 
-	std::unique_ptr<TextureCache>		m_texureCache;
-	std::unique_ptr<BatchDrawer>		m_batchDrawer;
+	std::unique_ptr<TextureCache> m_texureCache;
+	std::unique_ptr<BatchDrawer>  m_batchDrawer;
 
 	//-- Transfromed to batches user's data
-	std::vector<TexuredSpriteBatch>		m_batchedByTextureSprites;
+	std::vector<TexuredSpriteBatch> m_batchedByTextureSprites;
 };

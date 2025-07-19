@@ -20,8 +20,8 @@ std::string systemId()
 }
 
 //-------------------------------------------------------------------------------------------------
-template <typename T>
-concept SystemConcept = requires(T obj, float dt, Event& event)
+template<typename T>
+concept SystemConcept = requires (T obj, float dt, Event& event)
 {
 	obj.update(dt);
 	obj.onEvent(event);
@@ -32,10 +32,9 @@ export class System
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	template <SystemConcept T, typename... Args>
+	template<SystemConcept T, typename... Args>
 	explicit System(std::in_place_type_t<T>, Args&&... args)
-		: m_systemObject(std::make_unique<SystemObject<T>>(std::forward<Args>(args)...))
-	{}
+		: m_systemObject(std::make_unique<SystemObject<T>>(std::forward<Args>(args)...)) {}
 
 	//-------------------------------------------------------------------------------------------------
 	void update(float dt)
@@ -59,14 +58,17 @@ private:
 	//-------------------------------------------------------------------------------------------------
 	struct ISystem
 	{
-		virtual				~ISystem() = default;
-		virtual std::string	systemId() const = 0;
-		virtual void		update(float dt) = 0;
-		virtual void		onEvent(Event& event) = 0;
+		virtual ~ISystem() = default;
+
+		virtual std::string systemId() const = 0;
+
+		virtual void update(float dt) = 0;
+
+		virtual void onEvent(Event& event) = 0;
 	};
 
 	//-------------------------------------------------------------------------------------------------
-	template <SystemConcept T>
+	template<SystemConcept T>
 	struct SystemObject final : ISystem
 	{
 		//-------------------------------------------------------------------------------------------------
@@ -104,7 +106,7 @@ export struct SystemHolder
 	//-------------------------------------------------------------------------------------------------
 	void addSystem(System&& system)
 	{
-		m_systems.push_back({ system.systemId(), std::move(system) });
+		m_systems.emplace_back(system.systemId(), std::move(system));
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -112,8 +114,8 @@ export struct SystemHolder
 	void addSystem(Args&&... args)
 	{
 		m_systems.emplace_back(
-			systemId<SystemType>(),
-			System{ std::in_place_type<SystemType>, std::forward<Args>(args)... }
+			systemId<SystemType>()
+			, System{ std::in_place_type<SystemType>, std::forward<Args>(args)... }
 		);
 	}
 

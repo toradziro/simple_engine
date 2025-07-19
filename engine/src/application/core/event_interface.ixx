@@ -21,13 +21,12 @@ export class Event
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	template <typename T>
+	template<typename T>
 	Event(T event)
-		: m_eventObject(std::make_unique<EventObject<T>>(std::move(event)))
-	{}
+		: m_eventObject(std::make_unique<EventObject<T>>(std::move(event))) {}
 
 	//-------------------------------------------------------------------------------------------------
-	template <typename T>
+	template<typename T>
 	T& getUnderlyingEvent()
 	{
 		auto eventObject = static_cast<EventObject<T>*>(m_eventObject.get());
@@ -63,17 +62,20 @@ private:
 	{
 		virtual ~IEvent() = default;
 
-		virtual bool				isHandeled() const = 0;
-		virtual void				setHandeled() = 0;
-		virtual const std::string&	eventId() const = 0;
+		virtual bool isHandeled() const = 0;
+
+		virtual void setHandeled() = 0;
+
+		virtual const std::string& eventId() const = 0;
 	};
 
 	//-------------------------------------------------------------------------------------------------
-	template <typename T>
+	template<typename T>
 	struct EventObject final : IEvent
 	{
 		//-------------------------------------------------------------------------------------------------
-		EventObject(T&& event) : m_event(std::move(event)), m_eventId(::eventId<T>()) {}
+		EventObject(T&& event) : m_event(std::move(event))
+		                       , m_eventId(::eventId<T>()) {}
 
 		//-------------------------------------------------------------------------------------------------
 		virtual bool isHandeled() const override
@@ -93,9 +95,9 @@ private:
 			return m_eventId;
 		}
 
-		T					m_event;
-		bool				m_isHandeled = false;
-		const std::string	m_eventId;
+		T                 m_event;
+		bool              m_isHandeled = false;
+		const std::string m_eventId;
 	};
 
 private:
@@ -112,53 +114,51 @@ bool eventTypeCheck(Event& event)
 //-------------------------------------------------------------------------------------------------
 //-- Events Types
 //-- Application events
-export struct WindowCloseEvent
-{
-};
+export struct WindowCloseEvent {};
 
 //-- Key events
 export struct WindowResizeEvent
 {
-	int		m_width;
-	int		m_height;
+	int m_width;
+	int m_height;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct KeyPressedEvent
 {
-	int		m_keyCode;
-	int		m_repeatCount;
+	int m_keyCode;
+	int m_repeatCount;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct KeyReleasedEvent
 {
-	int		m_keyCode;
+	int m_keyCode;
 };
 
 //-------------------------------------------------------------------------------------------------
 //-- Mouse Events
 export struct MouseButtonPressedEvent
 {
-	int		m_buttonCode;
+	int m_buttonCode;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct MouseButtonReleasedEvent
 {
-	int		m_buttonCode;
+	int m_buttonCode;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct MouseMovedEvent
 {
-	float	m_mouseX;
-	float	m_mouseY;
+	float m_mouseX;
+	float m_mouseY;
 };
 
 //-------------------------------------------------------------------------------------------------
 export struct MouseScrolledEvent
 {
-	float	m_offsetX;
-	float	m_offsetY;
+	float m_offsetX;
+	float m_offsetY;
 };

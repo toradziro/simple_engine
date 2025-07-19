@@ -1,3 +1,4 @@
+# VS
 .vs
 *.sln
 *.vcxproj
@@ -9,3 +10,7 @@
 bin
 bin-int
 build
+
+# CLion
+*-build-*
+.idea

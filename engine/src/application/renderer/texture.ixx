@@ -19,8 +19,7 @@ export class VulkanTexture
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	VulkanTexture(const std::string& path, VkGraphicDevice* device) :
-		m_device(device)
+	VulkanTexture(const std::string& path, VkGraphicDevice* device) : m_device(device)
 	{
 		engineAssert(m_device != nullptr, "Device is not initialized yet");
 
@@ -83,17 +82,18 @@ private:
 		VkDeviceSize imageSize = m_pixelData.size();
 
 		// Create staging buffer
-		vk::Buffer stagingBuffer;
+		vk::Buffer       stagingBuffer;
 		vk::DeviceMemory stagingBufferMemory;
-		m_device->createBuffer(imageSize,
-			vk::BufferUsageFlagBits::eTransferSrc,
-			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-			stagingBuffer,
-			stagingBufferMemory);
+		m_device->createBuffer(imageSize
+		                       , vk::BufferUsageFlagBits::eTransferSrc
+		                       , vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+		                       , stagingBuffer
+		                       , stagingBufferMemory);
 
 		// Copy data to staging buffer
-		void* data;
-		[[maybe_unused]] auto res = m_device->getLogicalDevice().mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
+		void*                 data;
+		[[maybe_unused]] auto res = m_device->getLogicalDevice().
+		                                      mapMemory(stagingBufferMemory, 0, imageSize, {}, &data);
 
 		memcpy(data, m_pixelData.data(), imageSize);
 		m_device->getLogicalDevice().unmapMemory(stagingBufferMemory);
@@ -103,15 +103,15 @@ private:
 
 		vk::ImageCreateInfo imageInfo = {};
 		imageInfo.setImageType(vk::ImageType::e2D)
-			.setExtent(vk::Extent3D(m_width, m_height, 1))
-			.setMipLevels(1)
-			.setArrayLayers(1)
-			.setFormat(vkFormat)
-			.setTiling(vk::ImageTiling::eOptimal)
-			.setInitialLayout(vk::ImageLayout::eUndefined)
-			.setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled)
-			.setSamples(vk::SampleCountFlagBits::e1)
-			.setSharingMode(vk::SharingMode::eExclusive);
+		         .setExtent(vk::Extent3D(m_width, m_height, 1))
+		         .setMipLevels(1)
+		         .setArrayLayers(1)
+		         .setFormat(vkFormat)
+		         .setTiling(vk::ImageTiling::eOptimal)
+		         .setInitialLayout(vk::ImageLayout::eUndefined)
+		         .setUsage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled)
+		         .setSamples(vk::SampleCountFlagBits::e1)
+		         .setSharingMode(vk::SharingMode::eExclusive);
 
 		auto [imageRes, image] = m_device->getLogicalDevice().createImage(imageInfo);
 		m_image = image;
@@ -121,21 +121,20 @@ private:
 
 		vk::MemoryAllocateInfo allocInfo = {};
 		allocInfo.setAllocationSize(memRequirements.size)
-			.setMemoryTypeIndex(m_device->findMemoryType(memRequirements.memoryTypeBits,
-			vk::MemoryPropertyFlagBits::eDeviceLocal));
+		         .setMemoryTypeIndex(m_device->findMemoryType(memRequirements.memoryTypeBits
+		                                                      , vk::MemoryPropertyFlagBits::eDeviceLocal));
 
 		auto [allocRes, imageMem] = m_device->getLogicalDevice().allocateMemory(allocInfo);
 		m_imageMemory = imageMem;
 		m_device->getLogicalDevice().bindImageMemory(m_image, m_imageMemory, 0);
 
 		// Changing layout to once we need
-		m_device->transitionImage(m_image, vkFormat,
-			vk::ImageLayout::eUndefined,
-			vk::ImageLayout::eTransferDstOptimal);
+		m_device->transitionImage(m_image, vkFormat, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 		m_device->copyBufferToImage(stagingBuffer, m_image, m_width, m_height);
-		m_device->transitionImage(m_image, vkFormat,
-			vk::ImageLayout::eTransferDstOptimal,
-			vk::ImageLayout::eShaderReadOnlyOptimal);
+		m_device->transitionImage(m_image
+		                          , vkFormat
+		                          , vk::ImageLayout::eTransferDstOptimal
+		                          , vk::ImageLayout::eShaderReadOnlyOptimal);
 
 		// Cleaning staging
 		m_device->getLogicalDevice().destroyBuffer(stagingBuffer);
@@ -144,9 +143,9 @@ private:
 		// Creating image view
 		vk::ImageViewCreateInfo viewInfo = {};
 		viewInfo.setImage(m_image)
-			.setViewType(vk::ImageViewType::e2D)
-			.setFormat(vkFormat)
-			.setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+		        .setViewType(vk::ImageViewType::e2D)
+		        .setFormat(vkFormat)
+		        .setSubresourceRange(vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
 		auto [imageViewRes, imageView] = m_device->getLogicalDevice().createImageView(viewInfo);
 		m_imageView = imageView;
@@ -192,17 +191,17 @@ private:
 	}
 
 private:
-	VkGraphicDevice*	m_device;
-	std::string			m_path;
-	uint32_t			m_width = 0;
-	uint32_t			m_height = 0;
+	VkGraphicDevice* m_device;
+	std::string      m_path;
+	uint32_t         m_width = 0;
+	uint32_t         m_height = 0;
 
 	// Vulkan resources
-	vk::Image			m_image = VK_NULL_HANDLE;
-	vk::DeviceMemory	m_imageMemory = VK_NULL_HANDLE;
-	vk::ImageView		m_imageView = VK_NULL_HANDLE;
-	vk::DescriptorSet	m_descriptorSet = VK_NULL_HANDLE;
+	vk::Image         m_image = VK_NULL_HANDLE;
+	vk::DeviceMemory  m_imageMemory = VK_NULL_HANDLE;
+	vk::ImageView     m_imageView = VK_NULL_HANDLE;
+	vk::DescriptorSet m_descriptorSet = VK_NULL_HANDLE;
 
 	// Texture data
-	std::vector<uint8_t>	m_pixelData;
+	std::vector<uint8_t> m_pixelData;
 };

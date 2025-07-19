@@ -5,5 +5,5 @@ import manager_interface;
 //-------------------------------------------------------------------------------------------------
 export struct EngineContext
 {
-	ManagerHolder	m_managerHolder;
+	ManagerHolder m_managerHolder;
 };

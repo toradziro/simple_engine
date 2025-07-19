@@ -6,6 +6,11 @@ project(engine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Enable experimental module support for GCC
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-fmodules-ts)
+endif()
+
 # Set up dirs
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
@@ -44,8 +49,12 @@ set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/GLFW" EXCLUDE_FROM_ALL)
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 
-# Shaderc
+# Shaderc configuration - отключаем проблемные опции
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
+set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "Skip building examples for shaderc" FORCE)
+set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "Skip copyright check for shaderc" FORCE)
+# Отключаем precompiled headers для shaderc
+set(SHADERC_ENABLE_PCH OFF CACHE BOOL "Disable PCH for shaderc" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc" EXCLUDE_FROM_ALL)
 
 # Abseil configuration
@@ -87,15 +96,15 @@ assign_source_group(${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgu
 target_sources(engine PRIVATE ${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Include files
-target_include_directories(engine PRIVATE 
-    "engine/src"
-    ${GLFW_INCLUDE_DIR}
-    ${GLM_INCLUDE_DIR}
-    ${VULKAN_INCLUDE_DIR}
-    ${SHADERC_INCLUDE_DIR}
-    ${STB_INCLUDE_DIR}
-    ${IMGUI_INCLUDE_DIR}
-	${ABSEIL_INCLUDE_DIR}
+target_include_directories(engine PRIVATE
+        "engine/src"
+        ${GLFW_INCLUDE_DIR}
+        ${GLM_INCLUDE_DIR}
+        ${VULKAN_INCLUDE_DIR}
+        ${SHADERC_INCLUDE_DIR}
+        ${STB_INCLUDE_DIR}
+        ${IMGUI_INCLUDE_DIR}
+        ${ABSEIL_INCLUDE_DIR}
 )
 
 # Vulkan path
@@ -104,14 +113,14 @@ target_link_directories(engine PRIVATE ${VULKAN_LIB_DIR})
 
 # Add libs
 target_link_libraries(engine PRIVATE
-	glfw
-	vulkan-1
-	shaderc
-	absl::flat_hash_map
-	absl::hash
-	absl::strings
-	absl::time
-	absl::base
+        glfw
+        vulkan-1
+        shaderc
+        absl::flat_hash_map
+        absl::hash
+        absl::strings
+        absl::time
+        absl::base
 )
 
 # Win defines
@@ -120,25 +129,25 @@ if(WIN32)
 endif()
 
 # Lib config
-set_target_properties(engine PROPERTIES 
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release"
+set_target_properties(engine PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/bin/Debug"
+        RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/bin/Release"
 )
 
 # Debug config
-target_compile_options(engine PRIVATE 
-    $<$<CONFIG:Debug>:
+target_compile_options(engine PRIVATE
+        $<$<CONFIG:Debug>:
         $<$<CXX_COMPILER_ID:MSVC>:/Zi /Od /MDd>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O0>
-    >
+        >
 )
 
 # Release config
-target_compile_options(engine PRIVATE 
-    $<$<CONFIG:Release>:
+target_compile_options(engine PRIVATE
+        $<$<CONFIG:Release>:
         $<$<CXX_COMPILER_ID:MSVC>:/Zi /O2 /MD>
         $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-g -O2>
-    >
+        >
 )
 
 # Set starting project

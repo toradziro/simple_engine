@@ -21,14 +21,12 @@ export class Manager
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	template <typename T, typename... Args>
+	template<typename T, typename... Args>
 	explicit Manager(std::in_place_type_t<T>, Args&&... args)
-		: m_managerObject(std::make_unique<ManagerObject<T>>(std::forward<Args>(args)...))
-	{
-	}
+		: m_managerObject(std::make_unique<ManagerObject<T>>(std::forward<Args>(args)...)) {}
 
 	//-------------------------------------------------------------------------------------------------
-	template <typename T>
+	template<typename T>
 	T& getUnderlyingManager()
 	{
 		auto managerObject = static_cast<ManagerObject<T>*>(m_managerObject.get());
@@ -46,18 +44,17 @@ private:
 	struct IManager
 	{
 		virtual ~IManager() = default;
+
 		virtual std::string managerId() const = 0;
 	};
 
 	//-------------------------------------------------------------------------------------------------
-	template <typename T>
+	template<typename T>
 	struct ManagerObject final : IManager
 	{
 		//-------------------------------------------------------------------------------------------------
 		template<typename... Args>
-		ManagerObject(Args&&... args) : m_manager(std::forward<Args>(args)...)
-		{
-		}
+		ManagerObject(Args&&... args) : m_manager(std::forward<Args>(args)...) {}
 
 		//-------------------------------------------------------------------------------------------------
 		virtual std::string managerId() const override
@@ -86,9 +83,9 @@ export struct ManagerHolder
 	void addManager(Args&&... args)
 	{
 		m_managers.insert({
-				managerId<ManagerType>(),
-				Manager{ std::in_place_type<ManagerType>, std::forward<Args>(args)... }
-			});
+			managerId<ManagerType>()
+			, Manager{ std::in_place_type<ManagerType>, std::forward<Args>(args)... }
+		});
 	}
 
 	//-------------------------------------------------------------------------------------------------
@@ -102,5 +99,5 @@ export struct ManagerHolder
 	}
 
 private:
-	absl::flat_hash_map<std::string, Manager>	m_managers;
+	absl::flat_hash_map<std::string, Manager> m_managers;
 };
