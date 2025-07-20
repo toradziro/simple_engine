@@ -123,6 +123,7 @@ target_link_libraries(engine PRIVATE
         absl::time
         absl::base
         absl::flags
+        absl::flags_parse
 )
 
 # Win defines

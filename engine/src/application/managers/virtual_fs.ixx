@@ -15,7 +15,7 @@ export using fs_path = std::filesystem::path;
 export std::string normalizePath(const fs_path& path)
 {
 	std::string res = path.string();
-	size_t startPos = 0;
+	size_t      startPos = 0;
 	while ((startPos = res.find('\\', startPos)) != std::string::npos)
 	{
 		res.replace(startPos, 1, "/");
@@ -34,22 +34,29 @@ export struct File
 		return res;
 	}
 
-	fs_path					m_virtualPath;
-	std::vector<char>		m_buffer;
+	fs_path           m_virtualPath;
+	std::vector<char> m_buffer;
 };
 
 export class VirtualFS
 {
 public:
-	explicit VirtualFS(const std::string& projectPath) : m_projectPath(projectPath) {}
+	explicit VirtualFS(std::string projectPath)
+	{
+		if (projectPath.back() != '/' && projectPath.back() != '\\')
+		{
+			projectPath += "/";
+		}
+		m_projectPath = normalizePath(std::move(projectPath));
+	}
 
-	File	loadFile(const fs_path& path) const
+	File loadFile(const fs_path& path) const
 	{
 		File readFile;
 		readFile.m_virtualPath = path;
 		fs_path nativeFilePath = virtualToNativePath(path);
 
-		if (std::ifstream in(nativeFilePath, std::ios::in | std::ios::binary); in)
+		if (std::ifstream in(nativeFilePath, std::ios::in | std::ios::binary))
 		{
 			in.seekg(0, std::ios::end);
 			size_t size = in.tellg();
@@ -65,22 +72,23 @@ public:
 		return readFile;
 	}
 
-	File	createFile(const fs_path& path) const
+	File createFile(const fs_path& path) const
 	{
-		File file { .m_virtualPath = path };
+		File file{ .m_virtualPath = path };
 
 		return file;
 	}
-	bool	isFileExist(const fs_path& path) const
+
+	bool isFileExist(const fs_path& path) const
 	{
 		const fs_path nativePath = virtualToNativePath(path);
 		return std::filesystem::exists(nativePath);
 	}
 
-	void	writeFile(const File& file) const
+	void writeFile(const File& file) const
 	{
 		const fs_path nativePath = virtualToNativePath(file.m_virtualPath);
-		if (std::ofstream out(nativePath, std::ios::out | std::ios::trunc | std::ios::binary); out)
+		if (std::ofstream out(nativePath, std::ios::out | std::ios::trunc | std::ios::binary))
 		{
 			out.write(file.m_buffer.data(), file.m_buffer.size());
 			out.close();
@@ -89,10 +97,10 @@ public:
 
 	fs_path virtualToNativePath(const fs_path& path) const
 	{
-		auto res = m_projectPath / path;
+		const auto res = m_projectPath / path;
 		return normalizePath(res);
 	}
 
 private:
-	fs_path	m_projectPath;
+	fs_path m_projectPath;
 };

@@ -35,6 +35,8 @@ import <backends/imgui_impl_glfw.h>;
 import renderer_manager;
 import imgui_integration;
 import engine_assert;
+import engine_context;
+import virtual_fs;
 
 constexpr int C_MAX_FRAMES_IN_FLIGHT = 2;
 
@@ -186,6 +188,8 @@ export using BatchIndecies = std::vector<VulkanBufferMemory>;
 export class VkGraphicDevice
 {
 public:
+	VkGraphicDevice(EngineContext& context) : m_engineContext(context) {}
+
 	//-------------------------------------------------------------------------------------------------
 	~VkGraphicDevice()
 	{
@@ -727,11 +731,12 @@ public:
 		constexpr auto C_V_SHADER = "shaders/hello.vert";
 		constexpr auto C_F_SHADER = "shaders/hello.frag";
 
-		auto curr_path = std::filesystem::current_path();
-		auto root_path = curr_path.parent_path();
+		auto& vfs = m_engineContext.m_managerHolder.getManager<VirtualFS>();
+		engineAssert(vfs.isFileExist(C_V_SHADER), "Shader don't exist");
+		engineAssert(vfs.isFileExist(C_F_SHADER), "Shader don't exist");
 
-		auto full_vertex_shader_path = root_path / C_V_SHADER;
-		auto full_fragment_shader_path = root_path / C_F_SHADER;
+		auto full_vertex_shader_path = vfs.virtualToNativePath(C_V_SHADER);
+		auto full_fragment_shader_path = vfs.virtualToNativePath(C_F_SHADER);
 
 		std::cout << std::format("Vertex Shader path: '{}'", full_vertex_shader_path.generic_string()) << std::endl;
 		std::cout << std::format("Fragment Shader path: '{}'", full_fragment_shader_path.generic_string()) << std::endl;
@@ -1719,6 +1724,8 @@ private:
 	};
 
 private:
+	EngineContext& m_engineContext;
+
 	PhysicalDeviceData             m_physicalDeviceData;
 	std::vector<SwapchainImage>    m_swapchainImages;
 	Queues                         m_queues;

@@ -23,6 +23,8 @@ import event_interface;
 import window_manager;
 import engine_context;
 import vulkan_texture;
+import virtual_fs;
+import engine_assert;
 
 //-------------------------------------------------------------------------------------------------
 constexpr std::array<VertexData, 4> C_QUAD_BASIC_DATA =
@@ -46,7 +48,8 @@ class TextureCache
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	TextureCache(VkGraphicDevice& graphicDevice) : m_graphicDevice(graphicDevice) {}
+	TextureCache(VkGraphicDevice& graphicDevice, EngineContext& context) : m_graphicDevice(graphicDevice)
+	                                                                     , m_engineContext(context) {}
 
 	//-------------------------------------------------------------------------------------------------
 	VulkanTexture* loadTexture(const std::string& texturePath)
@@ -56,9 +59,9 @@ public:
 			return m_texturesMap[texturePath].get();
 		}
 
-		auto curr_path = std::filesystem::current_path();
-		auto root_path = curr_path.parent_path();
-		auto full_path = root_path / texturePath;
+		auto& vfs = m_engineContext.m_managerHolder.getManager<VirtualFS>();
+		engineAssert(vfs.isFileExist(texturePath), "Texture don't exist");
+		auto full_path = vfs.virtualToNativePath(texturePath);
 
 		auto res = m_texturesMap.insert({
 			texturePath
@@ -73,6 +76,7 @@ private:
 
 	TextureMap       m_texturesMap;
 	VkGraphicDevice& m_graphicDevice;
+	EngineContext&   m_engineContext;
 };
 
 class BatchDrawer
@@ -164,9 +168,10 @@ public:
 	//-------------------------------------------------------------------------------------------------
 	RendererSystem(EngineContext& context)
 		: m_engineContext(context)
+		, m_device(context)
 	{
 		m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
-		m_texureCache = std::make_unique<TextureCache>(m_device);
+		m_texureCache = std::make_unique<TextureCache>(m_device, context);
 		m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
 	}
 
