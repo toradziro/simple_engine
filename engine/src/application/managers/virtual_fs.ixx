@@ -56,7 +56,7 @@ public:
 		readFile.m_virtualPath = path;
 		fs_path nativeFilePath = virtualToNativePath(path);
 
-		if (std::ifstream in(nativeFilePath, std::ios::in | std::ios::binary))
+		if (std::ifstream in(nativeFilePath, std::ios::in | std::ios::binary); in)
 		{
 			in.seekg(0, std::ios::end);
 			size_t size = in.tellg();
@@ -88,7 +88,7 @@ public:
 	void writeFile(const File& file) const
 	{
 		const fs_path nativePath = virtualToNativePath(file.m_virtualPath);
-		if (std::ofstream out(nativePath, std::ios::out | std::ios::trunc | std::ios::binary))
+		if (std::ofstream out(nativePath, std::ios::out | std::ios::trunc | std::ios::binary); out)
 		{
 			out.write(file.m_buffer.data(), file.m_buffer.size());
 			out.close();
