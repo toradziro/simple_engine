@@ -6,6 +6,7 @@ import <chrono>;
 import <ctime>;
 import <print>;
 import <absl/time/time.h>;
+import <absl/time/clock.h>;
 
 import window_manager;
 import window_system;
@@ -16,12 +17,18 @@ import editor;
 import system_interface;
 import manager_interface;
 import engine_context;
+import virtual_fs;
+
+export struct Config
+{
+	std::string m_projectPath;
+};
 
 export class Engine
 {
 public:
 	//-------------------------------------------------------------------------------------------------
-	Engine()
+	Engine(const Config& config)
 	{
 		WindowInfo winInfo = {
 			.m_windowName = "Simple"
@@ -45,6 +52,7 @@ public:
 		//-- Create managers, be aware that managers may be initialized inside corresponding systems
 		m_context.m_managerHolder.addManager<WindowManager>();
 		m_context.m_managerHolder.addManager<RendererManager>();
+		m_context.m_managerHolder.addManager<VirtualFS>(config.m_projectPath);
 
 		//-- Create systems
 		m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));

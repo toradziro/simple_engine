@@ -49,11 +49,11 @@ set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/GLFW" EXCLUDE_FROM_ALL)
 set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 
-# Shaderc configuration - отключаем проблемные опции
+# Shaderc configuration
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
 set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "Skip building examples for shaderc" FORCE)
 set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "Skip copyright check for shaderc" FORCE)
-# Отключаем precompiled headers для shaderc
+# Turn off precompiled headers shaderc
 set(SHADERC_ENABLE_PCH OFF CACHE BOOL "Disable PCH for shaderc" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc" EXCLUDE_FROM_ALL)
 
@@ -64,7 +64,8 @@ set(ABSL_USE_EXTERNAL_GOOGLETEST OFF CACHE BOOL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil" EXCLUDE_FROM_ALL)
 
 # Main project
-add_executable(engine)
+add_executable(engine
+        engine/src/application/managers/virtual_fs.ixx)
 
 # Find source files
 file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
@@ -121,6 +122,7 @@ target_link_libraries(engine PRIVATE
         absl::strings
         absl::time
         absl::base
+        absl::flags
 )
 
 # Win defines
