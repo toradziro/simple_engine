@@ -1,9 +1,9 @@
-export module engine_context;
+#pragma once
 
-import manager_interface;
+#include <application/core/manager_interface.h>
 
 //-------------------------------------------------------------------------------------------------
-export struct EngineContext
+struct EngineContext
 {
 	ManagerHolder m_managerHolder;
 };

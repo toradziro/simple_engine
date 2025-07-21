@@ -6,11 +6,6 @@ project(engine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enable experimental module support for GCC
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-fmodules-ts)
-endif()
-
 # Set up dirs
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE})
@@ -53,6 +48,7 @@ set(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use DLL runtime (/MD)" FORCE)
 set(SHADERC_SKIP_TESTS ON CACHE BOOL "Skip building tests for shaderc")
 set(SHADERC_SKIP_EXAMPLES ON CACHE BOOL "Skip building examples for shaderc" FORCE)
 set(SHADERC_SKIP_COPYRIGHT_CHECK ON CACHE BOOL "Skip copyright check for shaderc" FORCE)
+
 # Turn off precompiled headers shaderc
 set(SHADERC_ENABLE_PCH OFF CACHE BOOL "Disable PCH for shaderc" FORCE)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shaderc" EXCLUDE_FROM_ALL)
@@ -63,17 +59,15 @@ set(ABSL_BUILD_TESTING OFF CACHE BOOL "")
 set(ABSL_USE_EXTERNAL_GOOGLETEST OFF CACHE BOOL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil" EXCLUDE_FROM_ALL)
 
-# Main project
-add_executable(engine
-        engine/src/application/managers/virtual_fs.ixx)
-
 # Find source files
 file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
-file(GLOB_RECURSE engine_MODULES "engine/src/**.ixx")
 file(GLOB_RECURSE engine_HEADERS "engine/src/**.h")
+
 # Find ImGui source files
 file(GLOB imgui_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking/*.cpp")
 file(GLOB imgui_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking/*.h")
+
+add_executable(engine)
 
 # File structure setup for Visual Studio
 # Function to set file structure as on disk
@@ -91,10 +85,10 @@ function(assign_source_group)
 endfunction(assign_source_group)
 
 # Apply function to our files
-assign_source_group(${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
+assign_source_group(${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Source files
-target_sources(engine PRIVATE ${engine_SOURCES} ${engine_MODULES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
+target_sources(engine PRIVATE ${engine_SOURCES} ${engine_HEADERS} ${imgui_SOURCES} ${imgui_HEADERS})
 
 # Include files
 target_include_directories(engine PRIVATE

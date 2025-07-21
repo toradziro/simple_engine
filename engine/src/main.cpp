@@ -1,4 +1,4 @@
-import simple_engine;
+#include <application/engine.h>
 
 #include "absl/flags/flag.h"
 #include "absl/flags/parse.h"

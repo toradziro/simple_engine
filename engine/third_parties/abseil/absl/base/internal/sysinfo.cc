@@ -321,7 +321,7 @@ static double MeasureTscFrequency() {
 static double GetNominalCPUFrequency() {
   long freq = 0;
 
-  // Google's production kernel has a patch to export the TSC
+  // Google's production kernel has a patch to the TSC
   // frequency through sysfs. If the kernel is exporting the TSC
   // frequency use that. There are issues where cpuinfo_max_freq
   // cannot be relied on because the BIOS may be exporting an invalid
@@ -335,7 +335,7 @@ static double GetNominalCPUFrequency() {
 
 #if defined(ABSL_INTERNAL_UNSCALED_CYCLECLOCK_FREQUENCY_IS_CPU_FREQUENCY)
   // On these platforms, the TSC frequency is the nominal CPU
-  // frequency.  But without having the kernel export it directly
+  // frequency.  But without having the kernel it directly
   // though /sys/devices/system/cpu/cpu0/tsc_freq_khz, there is no
   // other way to reliably get the TSC frequency, so we have to
   // measure it ourselves.  Some CPUs abuse cpuinfo_max_freq by

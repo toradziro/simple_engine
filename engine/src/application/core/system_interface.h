@@ -1,15 +1,15 @@
-export module system_interface;
+#pragma once
 
-import <memory>;
-import <vector>;
-import <string>;
-import <cassert>;
-import <algorithm>;
-import <ranges>;
-import <concepts>;
-import <typeinfo>;
+#include <memory>
+#include <vector>
+#include <string>
+#include <cassert>
+#include <algorithm>
+#include <ranges>
+#include <concepts>
+#include <typeinfo>
 
-import event_interface;
+class Event;
 
 //-------------------------------------------------------------------------------------------------
 template<typename System>
@@ -28,7 +28,7 @@ concept SystemConcept = requires (T obj, float dt, Event& event)
 };
 
 //-------------------------------------------------------------------------------------------------
-export class System
+class System
 {
 public:
 	//-------------------------------------------------------------------------------------------------
@@ -101,7 +101,7 @@ private:
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct SystemHolder
+struct SystemHolder
 {
 	//-------------------------------------------------------------------------------------------------
 	void addSystem(System&& system)

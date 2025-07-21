@@ -1,9 +1,9 @@
-export module window_manager;
+#pragma once
 
-import <glfw/glfw3.h>;
+#include <glfw/glfw3.h>
 
 //-------------------------------------------------------------------------------------------------
-export struct WindowManager
+struct WindowManager
 {
 public:
 	//-------------------------------------------------------------------------------------------------

@@ -1,13 +1,13 @@
-export module event_interface;
+#pragma once
 
-import <memory>;
-import <string>;
-import <cassert>;
-import <algorithm>;
-import <ranges>;
-import <concepts>;
-import <functional>;
-import <typeinfo>;
+#include <memory>
+#include <string>
+#include <cassert>
+#include <algorithm>
+#include <ranges>
+#include <concepts>
+#include <functional>
+#include <typeinfo>
 
 //-------------------------------------------------------------------------------------------------
 template<typename Event>
@@ -17,7 +17,7 @@ std::string eventId()
 }
 
 //-------------------------------------------------------------------------------------------------
-export class Event
+class Event
 {
 public:
 	//-------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ private:
 };
 
 //-------------------------------------------------------------------------------------------------
-export template<typename T>
+template<typename T>
 bool eventTypeCheck(Event& event)
 {
 	return event.eventId() == eventId<T>() && !event.isHandeled();
@@ -114,50 +114,50 @@ bool eventTypeCheck(Event& event)
 //-------------------------------------------------------------------------------------------------
 //-- Events Types
 //-- Application events
-export struct WindowCloseEvent {};
+struct WindowCloseEvent {};
 
 //-- Key events
-export struct WindowResizeEvent
+struct WindowResizeEvent
 {
 	int m_width;
 	int m_height;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct KeyPressedEvent
+struct KeyPressedEvent
 {
 	int m_keyCode;
 	int m_repeatCount;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct KeyReleasedEvent
+struct KeyReleasedEvent
 {
 	int m_keyCode;
 };
 
 //-------------------------------------------------------------------------------------------------
 //-- Mouse Events
-export struct MouseButtonPressedEvent
+struct MouseButtonPressedEvent
 {
 	int m_buttonCode;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct MouseButtonReleasedEvent
+struct MouseButtonReleasedEvent
 {
 	int m_buttonCode;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct MouseMovedEvent
+struct MouseMovedEvent
 {
 	float m_mouseX;
 	float m_mouseY;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct MouseScrolledEvent
+struct MouseScrolledEvent
 {
 	float m_offsetX;
 	float m_offsetY;

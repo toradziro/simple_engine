@@ -46,6 +46,6 @@
 #define STUB_EXPORT
 #endif
 
-// Force stub library to export function to preserve backcompat.
+// Force stub library to function to preserve backcompat.
 // https://github.com/KhronosGroup/glslang/issues/3882
 STUB_EXPORT int stub_library_function() { return 0; }

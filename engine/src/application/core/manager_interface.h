@@ -1,13 +1,13 @@
-export module manager_interface;
+#pragma once
 
-import <absl/container/flat_hash_map.h>;
-import <memory>;
-import <string>;
-import <cassert>;
-import <algorithm>;
-import <ranges>;
+#include <absl/container/flat_hash_map.h>
+#include <memory>
+#include <string>
+#include <cassert>
+#include <algorithm>
+#include <ranges>
 
-import engine_assert;
+#include <application/core/utils/engine_assert.h>
 
 //-------------------------------------------------------------------------------------------------
 template<typename Manager>
@@ -17,7 +17,7 @@ std::string managerId()
 }
 
 //-------------------------------------------------------------------------------------------------
-export class Manager
+class Manager
 {
 public:
 	//-------------------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ private:
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct ManagerHolder
+struct ManagerHolder
 {
 	//-------------------------------------------------------------------------------------------------
 	void addManager(Manager&& manager)

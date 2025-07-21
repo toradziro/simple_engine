@@ -125,7 +125,7 @@ ABSL_FLAG(std::vector<std::string>, flagfile, {},
     });
 ABSL_FLAG(std::vector<std::string>, fromenv, {},
           "comma-separated list of flags to set from the environment"
-          " [use 'export FLAGS_flag1=value']")
+          " [use 'FLAGS_flag1=value']")
     .OnUpdate([]() {
       if (absl::GetFlag(FLAGS_fromenv).empty()) return;
 

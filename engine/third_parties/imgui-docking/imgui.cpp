@@ -228,7 +228,7 @@ CODE
      This is to increase compatibility, increase maintainability and facilitate use from other languages.
    - C++: ImVec2/ImVec4 do not expose math operators by default, because it is expected that you use your own math types.
      See FAQ "How can I use my own math types instead of ImVec2/ImVec4?" for details about setting up imconfig.h for that.
-     We can can optionally export math operators for ImVec2/ImVec4 using IMGUI_DEFINE_MATH_OPERATORS, which we use internally.
+     We can can optionally math operators for ImVec2/ImVec4 using IMGUI_DEFINE_MATH_OPERATORS, which we use internally.
    - C++: pay attention that ImVector<> manipulates plain-old-data and does not honor construction/destruction
      (so don't use ImVector in your code or at our own risk!).
    - Building: We don't use nor mandate a build system for the main library.

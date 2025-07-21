@@ -1,17 +1,15 @@
-export module renderer_manager;
+#pragma once
 
-import <vector>;
-import <string>;
-import <array>;
-import <functional>;
+#include <vector>
+#include <string>
+#include <array>
+#include <functional>
 
-import <glm/glm.hpp>;
-import <vulkan/vulkan.h>;
-
-import imgui_integration;
+#include <glm/glm.hpp>
+#include <vulkan/vulkan.h>
 
 //-------------------------------------------------------------------------------------------------
-export struct VertexData
+struct VertexData
 {
 	glm::vec4 m_vertex;
 	glm::vec3 m_color;
@@ -19,28 +17,22 @@ export struct VertexData
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct SpriteInfo
+struct SpriteInfo
 {
 	glm::vec3   m_position;
 	std::string m_texturePath;
 };
 
 //-------------------------------------------------------------------------------------------------
-export struct RendererManager
+struct RendererManager
 {
 	using ImGuiDrawCallback = std::function<void()>;
 
 	//-------------------------------------------------------------------------------------------------
-	void addSpriteToDrawList(const SpriteInfo& spriteInfo)
-	{
-		m_sprites.push_back(spriteInfo);
-	}
+	void addSpriteToDrawList(const SpriteInfo& spriteInfo);
 
 	//-------------------------------------------------------------------------------------------------
-	void addImGuiDrawCallback(ImGuiDrawCallback imGuiUpdateUi)
-	{
-		m_imGuiUpdatesUi.emplace_back(imGuiUpdateUi);
-	}
+	void addImGuiDrawCallback(ImGuiDrawCallback imGuiUpdateUi);
 
 	//-- User notation object
 	std::vector<SpriteInfo>        m_sprites;

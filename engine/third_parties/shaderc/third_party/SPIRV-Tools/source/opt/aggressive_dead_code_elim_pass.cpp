@@ -918,7 +918,7 @@ bool AggressiveDCEPass::ProcessGlobalValues() {
     modified = true;
   }
 
-  // Since ADCE is disabled for non-shaders, we don't check for export linkage
+  // Since ADCE is disabled for non-shaders, we don't check for linkage
   // attributes here.
   for (auto& val : get_module()->types_values()) {
     if (!IsLive(&val)) {

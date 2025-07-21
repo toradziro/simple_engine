@@ -739,7 +739,7 @@ static unsigned TsanFlags(Mutex::MuHow how) {
 #endif
 
 #if defined(__APPLE__) || defined(ABSL_BUILD_DLL)
-// When building a dll symbol export lists may reference the destructor
+// When building a dll symbol lists may reference the destructor
 // and want it to be an exported symbol rather than an inline function.
 // Some apple builds also do dynamic library build but don't say it explicitly.
 Mutex::~Mutex() { Dtor(); }
