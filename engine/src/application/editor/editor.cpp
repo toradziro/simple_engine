@@ -44,10 +44,12 @@ void drawVec3Prop(glm::vec3& val, const std::string& propName)
 }
 
 //-------------------------------------------------------------------------------------------------
-EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context), m_scene(context)
+EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context), m_scenePanel(m_editorContext)
 {
-	m_firstEnt = std::make_unique<Entity>(m_scene.addEntity());
-	m_secondEnt = std::make_unique<Entity>(m_scene.addEntity());
+	m_editorContext.m_currentScene = std::make_unique<Scene>(m_engineContext);
+
+	m_firstEnt = std::make_unique<Entity>(m_editorContext.m_currentScene->addEntity());
+	m_secondEnt = std::make_unique<Entity>(m_editorContext.m_currentScene->addEntity());
 
 	m_firstEnt->component<TransformComponent>().m_position = { 0.5f, 0.5f, 0.5f };
 	m_secondEnt->component<TransformComponent>().m_position = { 0.0f, 0.0f, 0.0f };
@@ -61,11 +63,12 @@ void EditorSystem::update(float dt)
 {
 	m_fps = 1.0f / dt;
 
-	m_scene.update(dt);
+	m_editorContext.m_currentScene->update(dt);
 
 	auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
 	rendererManager.addImGuiDrawCallback([this]()
 		{
+			m_scenePanel.update();
 			updateUI();
 		});
 }
@@ -90,21 +93,17 @@ void EditorSystem::updateUI()
 	if (ImGui::Begin("Statistics info"))
 	{
 		ImGui::Text("FPS: %d", static_cast<int>(m_fps));
-		ImGui::End();
 
 		//ImGui::Text("Current Scene: %s", m_context->m_currentScene->name().c_str());
-		//if (m_context->m_selectedEntity)
-		//{
-		//std::string name = m_context->m_selectedEntity.component<EntityNameComponent>().m_name;
-		//ImGui::Text("Selected entity: %s", name.c_str());
-		//}
-		//else
-		//{
-		//ImGui::Text("Selected entity: <none>");
-		//}
-		//ImGui::Text("Time spent on a call: %.1f ms", m_dt * 1000.0f);
-		//const auto& stat = Application::subsystems().st<Renderer2D>().stats();
-		//ImGui::Text("Draw calls: %d", stat.m_drawCalls);
-		//ImGui::Text("Quads count: %d", stat.m_quadCount);
+		if (m_editorContext.m_selectedEntity)
+		{
+			std::string name = m_editorContext.m_selectedEntity->component<EntityName>().m_name;
+			ImGui::Text("Selected entity: %s", name.c_str());
+		}
+		else
+		{
+			ImGui::Text("Selected entity: <none>");
+		}
+		ImGui::End();
 	}
 }

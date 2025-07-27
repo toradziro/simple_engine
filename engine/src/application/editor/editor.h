@@ -4,10 +4,13 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
+#include "editor_context.h"
+
 #include <imgui.h>
 #include <format>
 
 #include <application/core/scene/scene.h>
+#include <application/editor/panels/scene_panel.h>
 
 class Event;
 struct EngineContext;
@@ -25,7 +28,8 @@ private:
 
 private:
 	EngineContext&	m_engineContext;
-	Scene			m_scene;
+	EditorContext	m_editorContext;
+	ScenePanel		m_scenePanel;
 
 	//-- Test data, remove later
 	std::unique_ptr<Entity>	m_firstEnt;

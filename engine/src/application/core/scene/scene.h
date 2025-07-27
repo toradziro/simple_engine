@@ -28,6 +28,11 @@ public:
 		return m_registry.get<Component>(m_entity);
 	}
 
+	entt::entity entityId() const
+	{
+		return m_entity;
+	}
+
 private:
 	entt::entity	m_entity;
 	entt::registry&	m_registry;
@@ -48,6 +53,13 @@ public:
 	void startSimulation();
 	void stopSimulation();
 	Entity addEntity();
+
+	entt::registry& registry() { return m_registry; }
+
+	void removeEntity(entt::entity e)
+	{
+		m_registry.destroy(e);
+	}
 
 private:
 	EngineContext&	m_engineContext;
