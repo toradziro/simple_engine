@@ -6,15 +6,6 @@
 #include <functional>
 
 #include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
-
-//-------------------------------------------------------------------------------------------------
-struct VertexData
-{
-	glm::vec4 m_vertex;
-	glm::vec3 m_color;
-	glm::vec2 m_texCoord;
-};
 
 //-------------------------------------------------------------------------------------------------
 struct SpriteInfo

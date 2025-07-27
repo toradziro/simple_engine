@@ -2,6 +2,7 @@
 
 #include <application/core/event_interface.h>
 #include <application/engine_context.h>
+#include <application/managers/renderer_manager.h>
 
 //-------------------------------------------------------------------------------------------------
 void drawVec3Prop(glm::vec3& val, const std::string& propName)
@@ -43,10 +44,16 @@ void drawVec3Prop(glm::vec3& val, const std::string& propName)
 }
 
 //-------------------------------------------------------------------------------------------------
-EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context)
+EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context), m_scene(context)
 {
-	m_firstSprite = { { 0.5f, 0.5f, 0.5f }, "images/nyan_cat.png" };
-	m_secondSprite = { { 0.0f, 0.0f, 0.0f }, "images/gg2.png" };
+	m_firstEnt = std::make_unique<Entity>(m_scene.addEntity());
+	m_secondEnt = std::make_unique<Entity>(m_scene.addEntity());
+
+	m_firstEnt->component<TransformComponent>().m_position = { 0.5f, 0.5f, 0.5f };
+	m_secondEnt->component<TransformComponent>().m_position = { 0.0f, 0.0f, 0.0f };
+
+	m_firstEnt->addComponent<SpriteComponent>("images/nyan_cat.png");
+	m_secondEnt->addComponent<SpriteComponent>("images/gg2.png");
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -54,15 +61,13 @@ void EditorSystem::update(float dt)
 {
 	m_fps = 1.0f / dt;
 
+	m_scene.update(dt);
+
 	auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
 	rendererManager.addImGuiDrawCallback([this]()
 		{
 			updateUI();
 		});
-
-	//-- Tst drawing here
-	rendererManager.addSpriteToDrawList(m_firstSprite);
-	rendererManager.addSpriteToDrawList(m_secondSprite);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -73,13 +78,12 @@ void EditorSystem::updateUI()
 	{
 		if (ImGui::Button("Switch Textures"))
 		{
-			std::string tmp = m_firstSprite.m_texturePath;
-			m_firstSprite.m_texturePath = m_secondSprite.m_texturePath;
-			m_secondSprite.m_texturePath = tmp;
+			std::swap(m_firstEnt->component<SpriteComponent>().m_texturePath
+				, m_secondEnt->component<SpriteComponent>().m_texturePath);
 		}
 
-		drawVec3Prop(m_firstSprite.m_position, "f_sprite");
-		drawVec3Prop(m_secondSprite.m_position, "s_sprite");
+		drawVec3Prop(m_firstEnt->component<TransformComponent>().m_position, "f_sprite");
+		drawVec3Prop(m_secondEnt->component<TransformComponent>().m_position, "s_sprite");
 		ImGui::End();
 	}
 

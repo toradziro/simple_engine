@@ -7,7 +7,7 @@
 #include <imgui.h>
 #include <format>
 
-#include <application/managers/renderer_manager.h>
+#include <application/core/scene/scene.h>
 
 class Event;
 struct EngineContext;
@@ -24,10 +24,12 @@ private:
 	void updateUI();
 
 private:
-	EngineContext& m_engineContext;
+	EngineContext&	m_engineContext;
+	Scene			m_scene;
 
-	//-- test
-	SpriteInfo m_firstSprite;
-	SpriteInfo m_secondSprite;
-	float      m_fps;
+	//-- Test data, remove later
+	std::unique_ptr<Entity>	m_firstEnt;
+	std::unique_ptr<Entity>	m_secondEnt;
+
+	float			m_fps = 0.0f;
 };

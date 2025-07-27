@@ -34,6 +34,14 @@ constexpr int C_MAX_FRAMES_IN_FLIGHT = 2;
 struct EngineContext;
 
 //-------------------------------------------------------------------------------------------------
+struct VertexData
+{
+	glm::vec4 m_vertex;
+	glm::vec3 m_color;
+	glm::vec2 m_texCoord;
+};
+
+//-------------------------------------------------------------------------------------------------
 struct QueueFamilies
 {
 	int m_graphicQueue = -1;

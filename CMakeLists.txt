@@ -38,6 +38,7 @@ set(SHADERC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/shader
 set(STB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/stb")
 set(IMGUI_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/imgui-docking")
 set(ABSEIL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil")
+set(ENTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/entt/src")
 
 # Set GLFW
 set(USE_MSVC_RUNTIME_LIBRARY_DLL ON CACHE BOOL "" FORCE)
@@ -58,6 +59,9 @@ set(ABSL_ENABLE_INSTALL OFF CACHE BOOL "")
 set(ABSL_BUILD_TESTING OFF CACHE BOOL "")
 set(ABSL_USE_EXTERNAL_GOOGLETEST OFF CACHE BOOL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/abseil" EXCLUDE_FROM_ALL)
+
+# Entt configuration
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine/third_parties/entt" EXCLUDE_FROM_ALL)
 
 # Find source files
 file(GLOB_RECURSE engine_SOURCES "engine/src/**.cpp")
@@ -100,6 +104,7 @@ target_include_directories(engine PRIVATE
         ${STB_INCLUDE_DIR}
         ${IMGUI_INCLUDE_DIR}
         ${ABSEIL_INCLUDE_DIR}
+        ${ENTT_INCLUDE_DIR}
 )
 
 # Vulkan path
