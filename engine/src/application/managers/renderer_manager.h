@@ -20,7 +20,7 @@ struct RendererManager
 	using ImGuiDrawCallback = std::function<void()>;
 
 	//-------------------------------------------------------------------------------------------------
-	void addSpriteToDrawList(const SpriteInfo& spriteInfo);
+	void addSpriteToDrawList(SpriteInfo spriteInfo);
 
 	//-------------------------------------------------------------------------------------------------
 	void addImGuiDrawCallback(ImGuiDrawCallback imGuiUpdateUi);

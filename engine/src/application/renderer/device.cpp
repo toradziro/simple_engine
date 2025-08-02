@@ -221,20 +221,25 @@ void VkGraphicDevice::endFrame(const TexturedGeometryBatch& geometryBatch, const
 
 	m_queues.m_graphicQueue.submit(submitInfo, m_inFlightFences[m_currFrame]);
 
-	vk::PresentInfoKHR presentInfo = {};
-	presentInfo.setWaitSemaphoreCount(1)
-		.setWaitSemaphores(m_renderFinishedSemaphores[m_currFrame])
-		.setSwapchainCount(1)
-		.setSwapchains(m_swapchain)
-		.setImageIndices(m_currImageIndex);
+	//-- Small peace of C-API here because we want to avoid assert on suboptimal
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	presentInfo.waitSemaphoreCount = 1;
+	VkSemaphore waitSemaphore = m_renderFinishedSemaphores[m_currFrame];
+	presentInfo.pWaitSemaphores = &waitSemaphore;
+	presentInfo.swapchainCount = 1;
+	VkSwapchainKHR swapchain = m_swapchain;
+	presentInfo.pSwapchains = &swapchain;
+	presentInfo.pImageIndices = &m_currImageIndex;
 
-	auto result = m_queues.m_presentationQueue.presentKHR(presentInfo);
-	if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR)
+	VkResult result = vkQueuePresentKHR(m_queues.m_presentationQueue, &presentInfo);
+
+	if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 	{
 		recreateSwapChain();
 		m_framebufferResized = false;
 	}
-	else if (result != vk::Result::eSuccess)
+	else if (result != VK_SUCCESS)
 	{
 		engineAssert(false, std::format("Failed to present swap chain image"));
 	}

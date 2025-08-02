@@ -11,6 +11,7 @@
 
 #include <application/core/scene/scene.h>
 #include <application/editor/panels/scene_panel.h>
+#include <application/editor/panels/entity_panel.h>
 
 class Event;
 struct EngineContext;
@@ -30,6 +31,7 @@ private:
 	std::shared_ptr<EngineContext>	m_engineContext;
 	std::shared_ptr<EditorContext>	m_editorContext;
 	ScenePanel		m_scenePanel;
+	EntityPanel		m_entityPanel;
 
 	//-- Test data, remove later
 	std::unique_ptr<Entity>	m_firstEnt;

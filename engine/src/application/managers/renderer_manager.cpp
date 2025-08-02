@@ -1,7 +1,7 @@
 #include "renderer_manager.h"
 
 //-------------------------------------------------------------------------------------------------
-void RendererManager::addSpriteToDrawList(const SpriteInfo& spriteInfo)
+void RendererManager::addSpriteToDrawList(SpriteInfo spriteInfo)
 {
 	m_sprites.push_back(spriteInfo);
 }
