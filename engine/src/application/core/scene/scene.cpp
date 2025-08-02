@@ -6,13 +6,7 @@ void Scene::update(float dt)
 	//-- Here will go check of current state
 	//-- Here we collect all entities to draw
 	auto spriteView = m_registry.view<SpriteComponent>();
-	for (auto& entity : spriteView)
-	{
-		SpriteComponent& sprite = m_registry.get<SpriteComponent>(entity);
-		TransformComponent& transform = m_registry.get<TransformComponent>(entity);
-		SpriteInfo spriteInfo { .m_position = transform.m_position, .m_texturePath = sprite.m_texturePath };
-		m_engineContext.m_managerHolder.getManager<RendererManager>().addSpriteToDrawList(std::move(spriteInfo));
-	}
+	sendToDraw(spriteView);
 }
 
 void Scene::startSimulation()
@@ -34,4 +28,18 @@ Entity Scene::addEntity()
 	entity.addComponent<EntityName>("new_entity");
 
 	return entity;
+}
+
+void Scene::sendToDraw(auto& spriteView)
+{
+	for (auto& entity : spriteView)
+	{
+		SpriteComponent&    sprite = m_registry.get<SpriteComponent>(entity);
+		TransformComponent& transform = m_registry.get<TransformComponent>(entity);
+		SpriteInfo          spriteInfo{
+			.m_position = transform.m_position
+			, .m_texturePath = sprite.m_texturePath
+		};
+		m_engineContext->m_managerHolder.getManager<RendererManager>().addSpriteToDrawList(std::move(spriteInfo));
+	}
 }

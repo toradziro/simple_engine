@@ -47,7 +47,7 @@ public:
 		Simulating
 	};
 
-	Scene(EngineContext& context) : m_engineContext(context) {}
+	Scene(std::shared_ptr<EngineContext> context) : m_engineContext(context) {}
 
 	void update(float dt);
 	void startSimulation();
@@ -62,7 +62,10 @@ public:
 	}
 
 private:
-	EngineContext&	m_engineContext;
+	void sendToDraw(auto& spriteView);
+
+private:
+	std::shared_ptr<EngineContext>	m_engineContext;
 	//-- All entities holder
 	entt::registry	m_registry;
 	State			m_state = State::Idle;

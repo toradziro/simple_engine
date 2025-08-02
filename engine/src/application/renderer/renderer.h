@@ -39,23 +39,23 @@ struct TexuredSpriteBatch
 class TextureCache
 {
 public:
-	TextureCache(VkGraphicDevice& graphicDevice, EngineContext& context) : m_graphicDevice(graphicDevice)
+	TextureCache(std::shared_ptr<VkGraphicDevice> graphicDevice, std::shared_ptr<EngineContext> context) : m_graphicDevice(graphicDevice)
 	                                                                     , m_engineContext(context) {}
 
-	VulkanTexture* loadTexture(const std::string& texturePath);
+	VulkanTexture* loadTexture(std::string_view texturePath);
 
 private:
 	using TextureMap = absl::flat_hash_map<std::string, std::unique_ptr<VulkanTexture>>;
 
 	TextureMap       m_texturesMap;
-	VkGraphicDevice& m_graphicDevice;
-	EngineContext&   m_engineContext;
+	std::shared_ptr<VkGraphicDevice> m_graphicDevice;
+	std::shared_ptr<EngineContext>   m_engineContext;
 };
 
 class BatchDrawer
 {
 public:
-	BatchDrawer(VkGraphicDevice& graphicDevice);
+	BatchDrawer(std::shared_ptr<VkGraphicDevice> graphicDevice);
 	~BatchDrawer();
 
 	void draw(const std::vector<TexuredSpriteBatch>& spriteBatches);
@@ -64,7 +64,7 @@ private:
 	//-------------------------------------------------------------------------------------------------
 	void clearBuffers(uint8_t frameIndex);
 
-	VkGraphicDevice& m_graphicDevice;
+	std::shared_ptr<VkGraphicDevice> m_graphicDevice;
 	//-- Transformed to device notation data
 	std::vector<TexturedGeometryBatch> m_vertexBuffersToFrames;
 	std::vector<BatchIndecies>         m_indexBuffersToFrames;
@@ -74,22 +74,22 @@ private:
 class RendererSystem
 {
 public:
-	RendererSystem(EngineContext& context);
+	RendererSystem(std::shared_ptr<EngineContext> context);
 	~RendererSystem();
 
 	void update(float dt);
 	void onEvent(Event& event);
 	void beginFrame(float dt);
 	void endFrame();
-	void resizedWindow() { m_device.resizedWindow(); }
+	void resizedWindow() { m_device->resizedWindow(); }
 
 private:
 	void batchSprites();
 
 private:
-	EngineContext& m_engineContext;
+	std::shared_ptr<EngineContext> m_engineContext;
 
-	VkGraphicDevice m_device;
+	std::shared_ptr<VkGraphicDevice> m_device;
 
 	std::unique_ptr<TextureCache> m_texureCache;
 	std::unique_ptr<BatchDrawer>  m_batchDrawer;

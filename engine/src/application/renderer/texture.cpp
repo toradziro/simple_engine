@@ -6,7 +6,7 @@
 #include <stb_image.h>
 
 //-------------------------------------------------------------------------------------------------
-VulkanTexture::VulkanTexture(const std::string& path, VkGraphicDevice* device) : m_device(device)
+VulkanTexture::VulkanTexture(std::string_view path, std::shared_ptr<VkGraphicDevice> device) : m_device(device)
 {
 	engineAssert(m_device != nullptr, "Device is not initialized yet");
 
@@ -21,16 +21,13 @@ VulkanTexture::~VulkanTexture()
 }
 
 //-------------------------------------------------------------------------------------------------
-void VulkanTexture::loadFromFile(const std::string& path)
+void VulkanTexture::loadFromFile(std::string_view path)
 {
 	int width, height, channels;
 	stbi_set_flip_vertically_on_load(true);
-	stbi_uc* pixels = stbi_load(path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	stbi_uc* pixels = stbi_load(path.data(), &width, &height, &channels, STBI_rgb_alpha);
 
-	if (!pixels)
-	{
-		throw std::runtime_error("Failed to load texture: " + path);
-	}
+	engineAssert(pixels != nullptr, std::format("Failed to load texture: {}", path));
 
 	m_width = static_cast<uint32_t>(width);
 	m_height = static_cast<uint32_t>(height);

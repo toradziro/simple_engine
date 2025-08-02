@@ -116,7 +116,7 @@ using BatchIndecies = std::vector<VulkanBufferMemory>;
 class VkGraphicDevice
 {
 public:
-	explicit VkGraphicDevice(EngineContext& context) : m_engineContext(context) {}
+	explicit VkGraphicDevice(std::shared_ptr<EngineContext> context) : m_engineContext(context) {}
 	~VkGraphicDevice();
 
 	void init(GLFWwindow* window);
@@ -214,7 +214,7 @@ private:
 	};
 
 private:
-	EngineContext& m_engineContext;
+	std::shared_ptr<EngineContext> m_engineContext;
 
 	PhysicalDeviceData             m_physicalDeviceData;
 	std::vector<SwapchainImage>    m_swapchainImages;

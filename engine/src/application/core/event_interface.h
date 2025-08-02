@@ -45,7 +45,7 @@ private:
 	friend bool eventTypeCheck(Event& event);
 
 	//-------------------------------------------------------------------------------------------------
-	const std::string& eventId() const
+	std::string_view eventId() const
 	{
 		return m_eventObject->eventId();
 	}
@@ -66,7 +66,7 @@ private:
 
 		virtual void setHandeled() = 0;
 
-		virtual const std::string& eventId() const = 0;
+		virtual std::string_view eventId() const = 0;
 	};
 
 	//-------------------------------------------------------------------------------------------------
@@ -90,7 +90,7 @@ private:
 		}
 
 		//-------------------------------------------------------------------------------------------------
-		virtual const std::string& eventId() const override
+		virtual std::string_view eventId() const override
 		{
 			return m_eventId;
 		}

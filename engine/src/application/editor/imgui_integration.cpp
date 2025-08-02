@@ -68,10 +68,10 @@ void ImGuiIntegration::update(VkCommandBuffer commandBuffer, std::vector<std::fu
 	ImGui::End();
 
 	//ImGui::ShowDemoWindow();
-	for (auto& drawItem : drawListImGuiUI)
-	{
-		drawItem();
-	}
+	std::for_each(drawListImGuiUI.begin(), drawListImGuiUI.end(), [](auto&& drawItem)
+		{
+			drawItem();
+		});
 
 	ImGui::Render();
 

@@ -5,7 +5,7 @@
 #include <application/managers/renderer_manager.h>
 
 //-------------------------------------------------------------------------------------------------
-void drawVec3Prop(glm::vec3& val, const std::string& propName)
+void drawVec3Prop(glm::vec3& val, std::string_view propName)
 {
 	const std::string imGuiIdX = std::format("##{}float3x", propName);
 	const std::string imGuiIdY = std::format("##{}float3y", propName);
@@ -44,12 +44,15 @@ void drawVec3Prop(glm::vec3& val, const std::string& propName)
 }
 
 //-------------------------------------------------------------------------------------------------
-EditorSystem::EditorSystem(EngineContext& context) : m_engineContext(context), m_scenePanel(m_editorContext)
+EditorSystem::EditorSystem(std::shared_ptr<EngineContext> context) : m_engineContext(context)
 {
-	m_editorContext.m_currentScene = std::make_unique<Scene>(m_engineContext);
+	m_editorContext = std::make_shared<EditorContext>();
+	m_editorContext->m_currentScene = std::make_unique<Scene>(m_engineContext);
 
-	m_firstEnt = std::make_unique<Entity>(m_editorContext.m_currentScene->addEntity());
-	m_secondEnt = std::make_unique<Entity>(m_editorContext.m_currentScene->addEntity());
+	m_scenePanel = ScenePanel(m_editorContext);
+
+	m_firstEnt = std::make_unique<Entity>(m_editorContext->m_currentScene->addEntity());
+	m_secondEnt = std::make_unique<Entity>(m_editorContext->m_currentScene->addEntity());
 
 	m_firstEnt->component<TransformComponent>().m_position = { 0.5f, 0.5f, 0.5f };
 	m_secondEnt->component<TransformComponent>().m_position = { 0.0f, 0.0f, 0.0f };
@@ -63,9 +66,9 @@ void EditorSystem::update(float dt)
 {
 	m_fps = 1.0f / dt;
 
-	m_editorContext.m_currentScene->update(dt);
+	m_editorContext->m_currentScene->update(dt);
 
-	auto& rendererManager = m_engineContext.m_managerHolder.getManager<RendererManager>();
+	auto& rendererManager = m_engineContext->m_managerHolder.getManager<RendererManager>();
 	rendererManager.addImGuiDrawCallback([this]()
 		{
 			m_scenePanel.update();
@@ -95,9 +98,9 @@ void EditorSystem::updateUI()
 		ImGui::Text("FPS: %d", static_cast<int>(m_fps));
 
 		//ImGui::Text("Current Scene: %s", m_context->m_currentScene->name().c_str());
-		if (m_editorContext.m_selectedEntity)
+		if (m_editorContext->m_selectedEntity)
 		{
-			std::string name = m_editorContext.m_selectedEntity->component<EntityName>().m_name;
+			std::string name = m_editorContext->m_selectedEntity->component<EntityName>().m_name;
 			ImGui::Text("Selected entity: %s", name.c_str());
 		}
 		else

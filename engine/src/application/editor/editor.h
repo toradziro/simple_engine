@@ -18,7 +18,7 @@ struct EngineContext;
 class EditorSystem
 {
 public:
-	EditorSystem(EngineContext& context);
+	EditorSystem(std::shared_ptr<EngineContext> context);
 
 	void update(float dt);
 	void onEvent(Event& event) const {}
@@ -27,8 +27,8 @@ private:
 	void updateUI();
 
 private:
-	EngineContext&	m_engineContext;
-	EditorContext	m_editorContext;
+	std::shared_ptr<EngineContext>	m_engineContext;
+	std::shared_ptr<EditorContext>	m_editorContext;
 	ScenePanel		m_scenePanel;
 
 	//-- Test data, remove later

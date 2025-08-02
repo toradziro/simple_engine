@@ -7,14 +7,14 @@ void ScenePanel::update()
 	{
 		drawContextMenu();
 
-		entt::registry& registry = m_editorContext.m_currentScene->registry();
+		entt::registry& registry = m_editorContext->m_currentScene->registry();
 		registry.view<entt::entity>().each([&](entt::entity entity)
 			{
 				Entity innerEntity(entity, registry);
 
 				const std::string_view entityName = innerEntity.component<EntityName>().m_name;
 				int flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_SpanFullWidth;
-				if (m_editorContext.m_selectedEntity && m_editorContext.m_selectedEntity->entityId() == entity)
+				if (m_editorContext->m_selectedEntity && m_editorContext->m_selectedEntity->entityId() == entity)
 				{
 					flags |= ImGuiTreeNodeFlags_Selected;
 				}
@@ -50,20 +50,20 @@ void ScenePanel::drawContextMenu()
 	}
 	if (ImGui::BeginPopupContextItem("##contextMenu"))
 	{
-		const bool anyEntitySelected = (m_editorContext.m_selectedEntity) && (m_editorContext.m_selectedEntity->entityId() != entt::null);
+		const bool anyEntitySelected = (m_editorContext->m_selectedEntity) && (m_editorContext->m_selectedEntity->entityId() != entt::null);
 		if (anyEntitySelected)
 		{
 			if (ImGui::MenuItem("Remove Entity"))
 			{
-				m_editorContext.m_currentScene->removeEntity(m_editorContext.m_selectedEntity->entityId());
-				m_editorContext.m_selectedEntity = {};
+				m_editorContext->m_currentScene->removeEntity(m_editorContext->m_selectedEntity->entityId());
+				m_editorContext->m_selectedEntity.reset();
 			}
 		}
 		else
 		{
 			if (ImGui::MenuItem("New Entity"))
 			{
-				auto& scene = m_editorContext.m_currentScene;
+				auto& scene = m_editorContext->m_currentScene;
 				auto newEntity = scene->addEntity();
 				newEntity.component<EntityName>().m_name = "New entity";
 				selectEntity(newEntity);
@@ -75,10 +75,10 @@ void ScenePanel::drawContextMenu()
 
 void ScenePanel::resetSelection()
 {
-	m_editorContext.m_selectedEntity.reset();
+	m_editorContext->m_selectedEntity.reset();
 }
 
 void ScenePanel::selectEntity(Entity e)
 {
-	m_editorContext.m_selectedEntity = std::make_unique<Entity>(e);
+	m_editorContext->m_selectedEntity = std::make_unique<Entity>(e);
 }

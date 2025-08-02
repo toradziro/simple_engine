@@ -5,7 +5,8 @@
 class ScenePanel
 {
 public:
-	ScenePanel(EditorContext& context) : m_editorContext(context) {}
+	ScenePanel() = default;
+	ScenePanel(std::shared_ptr<EditorContext> context) : m_editorContext(context) {}
 	void update();
 
 private:
@@ -14,5 +15,5 @@ private:
 	void resetSelection();
 
 private:
-	EditorContext&	m_editorContext;
+	std::shared_ptr<EditorContext>	m_editorContext;
 };

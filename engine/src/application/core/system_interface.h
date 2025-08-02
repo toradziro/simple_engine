@@ -9,6 +9,8 @@
 #include <concepts>
 #include <typeinfo>
 
+#include <absl/container/flat_hash_map.h>
+
 class Event;
 
 //-------------------------------------------------------------------------------------------------
@@ -106,14 +108,14 @@ struct SystemHolder
 	//-------------------------------------------------------------------------------------------------
 	void addSystem(System&& system)
 	{
-		m_systems.emplace_back(system.systemId(), std::move(system));
+		m_systems.emplace(system.systemId(), std::move(system));
 	}
 
 	//-------------------------------------------------------------------------------------------------
 	template<typename SystemType, typename... Args>
 	void addSystem(Args&&... args)
 	{
-		m_systems.emplace_back(
+		m_systems.emplace(
 			systemId<SystemType>()
 			, System{ std::in_place_type<SystemType>, std::forward<Args>(args)... }
 		);
@@ -132,5 +134,5 @@ struct SystemHolder
 	}
 
 private:
-	std::vector<std::pair<std::string, System>> m_systems;
+	absl::flat_hash_map<std::string, System> m_systems;
 };

@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <cassert>
+#include <memory>
 
 #include <GLFW/glfw3.h>
 
@@ -22,7 +23,7 @@ struct WindowInfo
 class WindowSystem
 {
 public:
-	WindowSystem(EngineContext& context, WindowInfo&& info) noexcept;
+	WindowSystem(std::shared_ptr<EngineContext> context, WindowInfo&& info) noexcept;
 	~WindowSystem() noexcept;
 
 	void	update(float dt);
@@ -31,6 +32,6 @@ public:
 	}
 
 private:
-	EngineContext&	m_context;
+	std::shared_ptr<EngineContext>	m_context;
 	WindowInfo		m_info;
 };

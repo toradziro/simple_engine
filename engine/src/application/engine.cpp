@@ -18,23 +18,16 @@ Engine::Engine(const Config& config)
 		, .m_height = 800
 		, .m_eventCallback = [&](Event& event)
 		{
-			if (eventTypeCheck<WindowCloseEvent>(event))
-			{
-				m_running = false;
-				event.setHandeled();
-				std::println("WindowCloseEvent");
-			}
-			for (auto& [_, system] : m_systemHolder)
-			{
-				system.onEvent(event);
-			}
+			eventCallback(event);
 		}
 	};
 
+	m_context = std::make_shared<EngineContext>();
+
 	//-- Create managers, be aware that managers may be initialized inside corresponding systems
-	m_context.m_managerHolder.addManager<WindowManager>();
-	m_context.m_managerHolder.addManager<RendererManager>();
-	m_context.m_managerHolder.addManager<VirtualFS>(config.m_projectPath);
+	m_context->m_managerHolder.addManager<WindowManager>();
+	m_context->m_managerHolder.addManager<RendererManager>();
+	m_context->m_managerHolder.addManager<VirtualFS>(config.m_projectPath);
 
 	//-- Create systems
 	m_systemHolder.addSystem<WindowSystem>(m_context, std::move(winInfo));
@@ -50,7 +43,7 @@ void Engine::run()
 	while (m_running)
 	{
 		auto  timeStart = absl::Now();
-		auto& rendererManager = m_context.m_managerHolder.getManager<RendererManager>();
+		auto& rendererManager = m_context->m_managerHolder.getManager<RendererManager>();
 
 		for (auto& [name, system] : m_systemHolder)
 		{
@@ -59,5 +52,21 @@ void Engine::run()
 
 		auto timeEnd = absl::Now();
 		lastFrameDt = absl::ToDoubleSeconds(timeEnd - timeStart);
+	}
+}
+
+void Engine::eventCallback(Event& event)
+{
+	if (eventTypeCheck<WindowCloseEvent>(event))
+	{
+		m_running = false;
+		event.setHandeled();
+		std::println("WindowCloseEvent");
+	}
+
+	//-- Send events to systems
+	for (auto& [_, system] : m_systemHolder)
+	{
+		system.onEvent(event);
 	}
 }

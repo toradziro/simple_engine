@@ -13,12 +13,12 @@ class VkGraphicDevice;
 class VulkanTexture
 {
 public:
-	VulkanTexture(const std::string& path, VkGraphicDevice* device);
+	VulkanTexture(std::string_view path, std::shared_ptr<VkGraphicDevice> device);
 	~VulkanTexture();
 
 	uint32_t getWidth() const { return m_width; }
 	uint32_t getHeight() const { return m_height; }
-	const std::string& getPath() const { return m_path; }
+	std::string_view getPath() const { return m_path; }
 	size_t getMemoryUsage() const { return size_t(); }
 
 	bool isValid() const { return m_image != VK_NULL_HANDLE; }
@@ -28,13 +28,13 @@ public:
 	vk::DescriptorSet getDescriptorSet() const { return m_descriptorSet; }
 
 private:
-	void loadFromFile(const std::string& path);
+	void loadFromFile(std::string_view path);
 	void createVulkanResources();
 	void createDescriptorSet();
 	void cleanup();
 
 private:
-	VkGraphicDevice* m_device;
+	std::shared_ptr<VkGraphicDevice> m_device;
 	std::string      m_path;
 	uint32_t         m_width = 0;
 	uint32_t         m_height = 0;

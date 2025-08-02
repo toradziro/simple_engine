@@ -598,7 +598,7 @@ void VkGraphicDevice::createShaderModule()
 	constexpr auto C_V_SHADER = "shaders/hello.vert";
 	constexpr auto C_F_SHADER = "shaders/hello.frag";
 
-	auto& vfs = m_engineContext.m_managerHolder.getManager<VirtualFS>();
+	auto& vfs = m_engineContext->m_managerHolder.getManager<VirtualFS>();
 	engineAssert(vfs.isFileExist(C_V_SHADER), "Shader don't exist");
 	engineAssert(vfs.isFileExist(C_F_SHADER), "Shader don't exist");
 
@@ -608,8 +608,8 @@ void VkGraphicDevice::createShaderModule()
 	std::cout << std::format("Vertex Shader path: '{}'", full_vertex_shader_path.generic_string()) << std::endl;
 	std::cout << std::format("Fragment Shader path: '{}'", full_fragment_shader_path.generic_string()) << std::endl;
 
-	auto vertexShaderFile = m_engineContext.m_managerHolder.getManager<VirtualFS>().loadFile(full_vertex_shader_path.generic_string());
-	auto fragmentShaderFile = m_engineContext.m_managerHolder.getManager<VirtualFS>().loadFile(full_fragment_shader_path.generic_string());
+	auto vertexShaderFile = m_engineContext->m_managerHolder.getManager<VirtualFS>().loadFile(full_vertex_shader_path.generic_string());
+	auto fragmentShaderFile = m_engineContext->m_managerHolder.getManager<VirtualFS>().loadFile(full_fragment_shader_path.generic_string());
 
 	std::vector<uint32_t> compiled_vertex_shader = compileShaderFromSource(
 		vertexShaderFile.toString()

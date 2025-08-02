@@ -12,36 +12,36 @@
 #include <application/core/utils/engine_assert.h>
 
 //-------------------------------------------------------------------------------------------------
-VulkanTexture* TextureCache::loadTexture(const std::string& texturePath)
+VulkanTexture* TextureCache::loadTexture(std::string_view texturePath)
 {
     if (m_texturesMap.count(texturePath))
     {
         return m_texturesMap[texturePath].get();
     }
 
-    auto& vfs = m_engineContext.m_managerHolder.getManager<VirtualFS>();
+    auto& vfs = m_engineContext->m_managerHolder.getManager<VirtualFS>();
     engineAssert(vfs.isFileExist(texturePath), "Texture don't exist");
     auto full_path = vfs.virtualToNativePath(texturePath);
 
     auto res = m_texturesMap.insert({
-        texturePath
-        , std::make_unique<VulkanTexture>(full_path.string(), &m_graphicDevice)
-        });
+        texturePath.data()
+        , std::make_unique<VulkanTexture>(full_path.string(), m_graphicDevice)
+     });
 
     return res.first->second.get();
 }
 
 //-------------------------------------------------------------------------------------------------
-BatchDrawer::BatchDrawer(VkGraphicDevice& graphicDevice) : m_graphicDevice(graphicDevice)
+BatchDrawer::BatchDrawer(std::shared_ptr<VkGraphicDevice> graphicDevice) : m_graphicDevice(graphicDevice)
 {
-	m_vertexBuffersToFrames.resize(m_graphicDevice.maxFrames());
-	m_indexBuffersToFrames.resize(m_graphicDevice.maxFrames());
+	m_vertexBuffersToFrames.resize(m_graphicDevice->maxFrames());
+	m_indexBuffersToFrames.resize(m_graphicDevice->maxFrames());
 }
 
 //-------------------------------------------------------------------------------------------------
 BatchDrawer::~BatchDrawer()
 {
-	for (uint32_t i = 0; i < m_graphicDevice.maxFrames(); ++i)
+	for (uint32_t i = 0; i < m_graphicDevice->maxFrames(); ++i)
 	{
 		clearBuffers(static_cast<uint8_t>(i));
 	}
@@ -50,7 +50,7 @@ BatchDrawer::~BatchDrawer()
 //-------------------------------------------------------------------------------------------------
 void BatchDrawer::draw(const std::vector<TexuredSpriteBatch>& spriteBatches)
 {
-	const auto currFrameIndex = m_graphicDevice.currFrame();
+	const auto currFrameIndex = m_graphicDevice->currFrame();
 
 	clearBuffers(currFrameIndex);
 
@@ -65,17 +65,17 @@ void BatchDrawer::draw(const std::vector<TexuredSpriteBatch>& spriteBatches)
 	for (auto& batch : spriteBatches)
 	{
 		TexturedGeometry texturedGeometry = {
-			.m_memory = m_graphicDevice.createCombinedVertexBuffer(batch.m_geometryBatch)
+			.m_memory = m_graphicDevice->createCombinedVertexBuffer(batch.m_geometryBatch)
 			, .m_textureDescriptorSet = batch.m_texture->getDescriptorSet()
 			, .m_spritesCount = batch.m_spritesCount
 		};
 
 		currentTexturedGeometryBatch.emplace_back(std::move(texturedGeometry));
-		currentIndexBatch.push_back(m_graphicDevice.createIndexBuffer(batch.m_spritesCount));
+		currentIndexBatch.push_back(m_graphicDevice->createIndexBuffer(batch.m_spritesCount));
 	}
 
 	//-- Drawind self processed here
-	m_graphicDevice.endFrame(currentTexturedGeometryBatch, currentIndexBatch);
+	m_graphicDevice->endFrame(currentTexturedGeometryBatch, currentIndexBatch);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -88,14 +88,14 @@ void BatchDrawer::clearBuffers(uint8_t frameIndex)
 	{
 		if (batch.m_memory.m_buffer != VK_NULL_HANDLE)
 		{
-			m_graphicDevice.clearBuffer(batch.m_memory);
+			m_graphicDevice->clearBuffer(batch.m_memory);
 		}
 	}
 	for (auto& indexBatch : currentIndexBatch)
 	{
 		if (indexBatch.m_buffer != VK_NULL_HANDLE)
 		{
-			m_graphicDevice.clearBuffer(indexBatch);
+			m_graphicDevice->clearBuffer(indexBatch);
 		}
 	}
 
@@ -104,11 +104,11 @@ void BatchDrawer::clearBuffers(uint8_t frameIndex)
 }
 
 //-------------------------------------------------------------------------------------------------
-RendererSystem::RendererSystem(EngineContext& context)
+RendererSystem::RendererSystem(std::shared_ptr<EngineContext> context)
 	: m_engineContext(context)
-	, m_device(context)
 {
-	m_device.init(m_engineContext.m_managerHolder.getManager<WindowManager>().window());
+	m_device = std::make_shared<VkGraphicDevice>(context);
+	m_device->init(m_engineContext->m_managerHolder.getManager<WindowManager>().window());
 	m_texureCache = std::make_unique<TextureCache>(m_device, context);
 	m_batchDrawer = std::make_unique<BatchDrawer>(m_device);
 }
@@ -116,7 +116,7 @@ RendererSystem::RendererSystem(EngineContext& context)
 //-------------------------------------------------------------------------------------------------
 RendererSystem::~RendererSystem()
 {
-	m_device.waitGraphicIdle();
+	m_device->waitGraphicIdle();
 	m_batchDrawer.reset();
 }
 
@@ -148,31 +148,31 @@ void RendererSystem::onEvent(Event& event)
 //-------------------------------------------------------------------------------------------------
 void RendererSystem::beginFrame(float dt)
 {
-	m_device.beginFrame(dt);
+	m_device->beginFrame(dt);
 }
 
 //-------------------------------------------------------------------------------------------------
 void RendererSystem::endFrame()
 {
-	const auto currFrameIndex = m_device.currFrame();
+	const auto currFrameIndex = m_device->currFrame();
 
 	batchSprites();
 	//-- Batch drawer will call device drawing
-	auto& drawListImGuiUI = m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi;
-	m_device.setImGuiDrawCallbacks(drawListImGuiUI);
+	auto& drawListImGuiUI = m_engineContext->m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi;
+	m_device->setImGuiDrawCallbacks(drawListImGuiUI);
 	m_batchDrawer->draw(m_batchedByTextureSprites);
-	m_engineContext.m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi.clear();
+	m_engineContext->m_managerHolder.getManager<RendererManager>().m_imGuiUpdatesUi.clear();
 
 	//-- Clear collections, for now rendering has no any caches
 	m_batchedByTextureSprites.clear();
 
-	m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites.clear();
+	m_engineContext->m_managerHolder.getManager<RendererManager>().m_sprites.clear();
 }
 
 //-------------------------------------------------------------------------------------------------
 void RendererSystem::batchSprites()
 {
-	auto& sprites = m_engineContext.m_managerHolder.getManager<RendererManager>().m_sprites;
+	auto& sprites = m_engineContext->m_managerHolder.getManager<RendererManager>().m_sprites;
 	if (sprites.empty())
 	{
 		return;

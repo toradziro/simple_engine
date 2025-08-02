@@ -26,7 +26,10 @@ public:
 	void run();
 
 private:
-	EngineContext m_context;
+	void eventCallback(Event& event);
+
+private:
+	std::shared_ptr<EngineContext> m_context;
 	SystemHolder  m_systemHolder;
 
 	bool m_running = true;
